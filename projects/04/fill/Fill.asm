@@ -11,4 +11,38 @@
 // "white" in every pixel;
 // the screen should remain fully clear as long as no key is pressed.
 
-// Put your code here.
+(MAIN)
+    @SCREEN
+    D  = A
+    @address
+    M = D
+    @i
+    M = 0
+    @KBD
+    D = M
+    @NOKEYPRESS
+    D; JEQ
+    @key
+    M = -1
+    @LOOP
+    0;JMP
+(NOKEYPRESS)
+    @key
+    M = 0
+(LOOP)
+    @key
+    D = M
+    @address
+    A = M
+    M = D 
+    @i
+    M = M +1
+    D = M
+    @8192
+    D = D - A
+    @MAIN
+    D; JGE
+    @address
+    M = M+1
+    @LOOP
+    0;JMP
