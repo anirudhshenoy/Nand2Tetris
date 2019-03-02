@@ -26,7 +26,6 @@
  */
 
 CHIP CPU {
-
     IN  inM[16],         // M value input  (M = contents of RAM[A])
         instruction[16], // Instruction for execution
         reset;           // Signals whether to re-start the current
@@ -40,4 +39,33 @@ CHIP CPU {
 
     PARTS:
     // Put your code here:
+    Mux16(a =instruction[0..15], b = outALU, sel = instruction[15] , out[0..14] = muxOut);
+    Not(in = instruction[15], out = AinstLoad);
+    And(a = instruction[15], b = instruction[5], out = CinstALoad);
+    And(a = instruction[15], b=instruction[4], out = CinstDLoad);
+    Or(a = AinstLoad, b = CinstALoad, out = ALoad);
+    ARegister(in[15] = false, in[0..14] = muxOut, load = ALoad, out = outAReg, out[0..14] = addressM);
+    Mux16(a = outAReg, b = inM, sel = instruction[12], out = muxALUOut);
+    DRegister(in = outALU, load = CinstDLoad, out = outDReg);
+    ALU(x = outDReg, y = muxALUOut, zx = instruction[11], nx = instruction[10], zy = instruction[9], ny = instruction[8], f = instruction[7], no = instruction[6], out = outALU, out = outM, zr = outZr, ng = outNg);
+    And(a = instruction[15], b = instruction[3], out = writeM);
+
+    Not(in = outZr, out = notZr);
+    Not(in = outNg, out = notNg);
+
+    And(a = notZr, b = notNg, out = outNotZrNg);
+    And(a = instruction[0], b = outNotZrNg, out = outJGT);
+    And(a = instruction[1], b = outZr, out = outJEQ);
+    And(a = instruction[1], b = instruction[0], out = outJ2J3);
+    And(a = outJ2J3, b = notNg, out = outJGE);
+    And(a = instruction[2], b = outNg, out = outJLT);
+    And(a = instruction[2], b = instruction[0], out = outJ1J3);
+    And(a = outJ1J3, b = notZr, out = outJNE);
+    And(a = instruction[2], b = instruction[1], out = outJ1J2);
+    And(a = outJ1J2, b = outNg, out = outJLE);
+    And(a = outJ1J2, b = instruction[0], out = outJMP);
+    Or8Way(in[0] = outJGT, in[1] = outJEQ, in[2] = outJGE, in[3] = outJLT, in[4] = outJNE, in[5] = outJLE, in[6] = outJMP, in[7] = false, out = loadPCCinst);
+    And(a = instruction[15], b = loadPCCinst, out = loadPC);
+    Not(in = loadPC, out = incPC);
+    PC(in = outAReg, load = loadPC, inc = incPC, reset = reset, out[0..14] = pc);
 }
