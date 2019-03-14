@@ -167,13 +167,18 @@ class CodeWriter:
             return self.filename + str(index)
         elif(segment == 'temp'):
             return str(int(index)+5)
+        elif(segment == 'pointer'):
+            if(index == '1'):
+                return 'THAT'
+            else:
+                return 'THIS'
         else:
             return self._get_segment_shorthand(segment)
 
     def _write_push_commands(self, segment, index):
         if(segment == 'constant'):
             self.assembly_code.append('D=A')
-        elif(segment == 'static' or segment == 'temp'):
+        elif(segment == 'static' or segment == 'temp' or segment == 'pointer' ):
             self.assembly_code.append('D=M')
         else:
             self.assembly_code.append('D=M')
@@ -183,7 +188,7 @@ class CodeWriter:
             self.assembly_code.append('D=M')
 
     def _write_pop_commands(self, segment, index):
-        if(segment == 'static' or segment == 'temp'):
+        if(segment == 'static' or segment == 'temp' or segment == 'pointer'):
             self.assembly_code.append('D=A')
         else:
             self.assembly_code.append('D=M')
