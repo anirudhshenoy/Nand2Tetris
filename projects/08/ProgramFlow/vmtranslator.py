@@ -2,9 +2,11 @@ import sys
 
 
 class Translator:
-    def __init__(self, parser, codewriter):
-        self.parser = parser
-        self.codewriter = codewriter
+    def __init__(self, filename):
+        self.filename = filename
+        self.parser = Parser(filename)
+        self.f_asm = open(filename[:-3] + '.asm', 'w')
+        self.codewriter = CodeWriter(filename, self.f_asm)
 
     def translate(self):
         while(self.parser.hasMoreCommands()):
@@ -14,10 +16,16 @@ class Translator:
             if (command_type == 'C_PUSH' or command_type == 'C_POP'):
                 self.codewriter.writePushPop(
                     command.split()[0], self.parser.arg1(), self.parser.arg2())
+            elif (command_type == 'C_GOTO'):
+                self.codewriter.writeGoTo(self.parser.arg1())
+            elif (command_type == 'C_LABEL'):
+                self.codewriter.writeLabel(self.parser.arg1())
+            elif (command_type == 'C_IF'):
+                self.codewriter.writeIf(self.parser.arg1())
             else:
                 self.codewriter.writeArithmetic(command)
         self.codewriter.writeInfiniteLoop()
-        self.codewriter.write_to_file()
+        self.codewriter.closeFile()
 
 
 class Parser:
@@ -45,8 +53,8 @@ class Parser:
             'function': 'C_FUNCTION',
             'goto': 'C_GOTO',
             'label': 'C_LABEL',
-            'if': 'C_IF',
-            'return': 'C_RETURN'
+            'if-goto': 'C_IF',
+            'return': 'C_RETURN',
             'call': 'C_CALL'
         }
         return commandtype_lookup.get(first_word, 'C_ARITHMETIC')
@@ -75,66 +83,67 @@ class Parser:
 
 
 class CodeWriter:
-    def __init__(self, filename):
-        self.assembly_code = []
+    def __init__(self, filename, f_asm):
         self.conditional_index = 0  # Used to create Labels for conditional jumps
         self.filename = filename[:-3]
+        self.f_asm = f_asm
 
     def set_file_name(self, filename):
         self.filename = filename
 
     def writeLabel(self, label):
-        self.assembly_code.append('(' +label + ')')
+        self.write_command_to_file('(' + label + ')')
 
     def writeGoTo(self, label):
-        self.assembly_code.append('@' + label)
-        self.assembly_code.append('0; JMP')
-    
+        self.write_command_to_file('@' + label)
+        self.write_command_to_file('0; JMP')
+
     def writeIf(self, label):
         self._dec_SP()
-        self.assembly_code.append('@SP')
-        #TODO complete implmentation
-        pass
-    
+        self.write_command_to_file('A=M')
+        self.write_command_to_file('D=M')
+        self.write_command_to_file('@' + label)
+        self.write_command_to_file('D; JGT')
+
     def writeInfiniteLoop(self):
-        self.assembly_code.append('(INFINITE_LOOP)')
-        self.assembly_code.append('@INFINITE_LOOP')
-        self.assembly_code.append('0;JMP')
+        self.write_command_to_file('(INFINITE_LOOP)')
+        self.write_command_to_file('@INFINITE_LOOP')
+        self.write_command_to_file('0;JMP')
 
     def add_comment(self, comment):
-        self.assembly_code.append('//' + comment)
+        self.write_command_to_file('//' + comment)
 
     def writeArithmetic(self, command):
         # Move the first operand to the D register
         self._dec_SP()
-        self.assembly_code.append('A=M')
-        self.assembly_code.append('D=M')  # Value at SP
+        self.write_command_to_file('A=M')
+        self.write_command_to_file('D=M')  # Value at SP
         if(command == 'not'):
-            self.assembly_code.append('M=!D')
+            self.write_command_to_file('M=!D')
             self._inc_SP()
             return
         if(command == 'neg'):
-            self.assembly_code.append('M=-D')
+            self.write_command_to_file('M=-D')
             self._inc_SP()
             return
         # Following commands require 2 operands, so we extract the previous element
         self._dec_SP()
         # Get the address of the 2nd operand
-        self.assembly_code.append('A=M')
+        self.write_command_to_file('A=M')
         if(command == 'add'):
-            self.assembly_code.append('M=M+D')
+            self.write_command_to_file('M=M+D')
             self._inc_SP()
             return
         elif(command == 'sub'):
-            self.assembly_code.append('M=M-D')
+            self.write_command_to_file('M=M-D')
             self._inc_SP()
             return
         elif(command == 'and'):
-            self.assembly_code.append('M=M&D')
+            self.write_command_to_file('M=M&D')
             self._inc_SP()
             return
         elif(command == 'or'):
-            self.assembly_code.append('M=M|D')
+            self.write_command_to_file('M=M|D')
             self._inc_SP()
             return
         else:
@@ -142,45 +151,45 @@ class CodeWriter:
 
     def writeConditional(self, command):
         command = command.upper()
-        self.assembly_code.append('D=M-D')
-        self.assembly_code.append('@IF_' + str(self.conditional_index))
-        self.assembly_code.append('D;J'+command)
-        self.assembly_code.append('@0')  # Set False Flag
-        self.assembly_code.append('D=A')
+        self.write_command_to_file('D=M-D')
+        self.write_command_to_file('@IF_' + str(self.conditional_index))
+        self.write_command_to_file('D;J'+command)
+        self.write_command_to_file('@0')  # Set False Flag
+        self.write_command_to_file('D=A')
         self._push_to_stack()
-        self.assembly_code.append('@CONTINUE_' + str(self.conditional_index))
-        self.assembly_code.append('0;JMP')
-        self.assembly_code.append('(IF_' + str(self.conditional_index) + ')')
-        self.assembly_code.append('@1')  # Set True Flag,
-        self.assembly_code.append('D=-A')  # true flag is -1
+        self.write_command_to_file('@CONTINUE_' + str(self.conditional_index))
+        self.write_command_to_file('0;JMP')
+        self.write_command_to_file('(IF_' + str(self.conditional_index) + ')')
+        self.write_command_to_file('@1')  # Set True Flag,
+        self.write_command_to_file('D=-A')  # true flag is -1
         self._push_to_stack()
-        self.assembly_code.append(      # Resume execution from here
+        self.write_command_to_file(      # Resume execution from here
             '(CONTINUE_' + str(self.conditional_index) + ')')
         self._inc_SP()
         self.conditional_index += 1
         return
 
     def _pop_from_stack(self):
-        self.assembly_code.append('@SP')
-        self.assembly_code.append('A=M')
-        self.assembly_code.append('D=D+M')
-        self.assembly_code.append('M=D-M')
-        self.assembly_code.append('D=D-M')
-        self.assembly_code.append('A=M')
-        self.assembly_code.append('M=D')
+        self.write_command_to_file('@SP')
+        self.write_command_to_file('A=M')
+        self.write_command_to_file('D=D+M')
+        self.write_command_to_file('M=D-M')
+        self.write_command_to_file('D=D-M')
+        self.write_command_to_file('A=M')
+        self.write_command_to_file('M=D')
 
     def _dec_SP(self):
-        self.assembly_code.append('@SP')
-        self.assembly_code.append('M=M-1')
+        self.write_command_to_file('@SP')
+        self.write_command_to_file('M=M-1')
 
     def _push_to_stack(self):
-        self.assembly_code.append('@SP')
-        self.assembly_code.append('A=M')
-        self.assembly_code.append('M=D')
+        self.write_command_to_file('@SP')
+        self.write_command_to_file('A=M')
+        self.write_command_to_file('M=D')
 
     def _inc_SP(self):
-        self.assembly_code.append('@SP')
-        self.assembly_code.append('M=M+1')
+        self.write_command_to_file('@SP')
+        self.write_command_to_file('M=M+1')
 
     def _get_address(self, segment, index):
         if(segment == 'constant'):
@@ -200,26 +209,26 @@ class CodeWriter:
 
     def _write_push_commands(self, segment, index):
         if(segment == 'constant'):
-            self.assembly_code.append('D=A')
+            self.write_command_to_file('D=A')
         elif(segment == 'static' or segment == 'temp' or segment == 'pointer'):
-            self.assembly_code.append('D=M')
+            self.write_command_to_file('D=M')
         else:
-            self.assembly_code.append('D=M')
-            self.assembly_code.append('@' + index)
-            self.assembly_code.append('D=D+A')
-            self.assembly_code.append('A=D')
-            self.assembly_code.append('D=M')
+            self.write_command_to_file('D=M')
+            self.write_command_to_file('@' + index)
+            self.write_command_to_file('D=D+A')
+            self.write_command_to_file('A=D')
+            self.write_command_to_file('D=M')
 
     def _write_pop_commands(self, segment, index):
         if(segment == 'static' or segment == 'temp' or segment == 'pointer'):
-            self.assembly_code.append('D=A')
+            self.write_command_to_file('D=A')
         else:
-            self.assembly_code.append('D=M')
-            self.assembly_code.append('@' + index)
-            self.assembly_code.append('D=D+A')
+            self.write_command_to_file('D=M')
+            self.write_command_to_file('@' + index)
+            self.write_command_to_file('D=D+A')
 
     def writePushPop(self, command, segment, index):
-        self.assembly_code.append('@' + self._get_address(segment, index))
+        self.write_command_to_file('@' + self._get_address(segment, index))
         if(command == 'push'):
             self._write_push_commands(segment, index)
             self._push_to_stack()
@@ -238,12 +247,13 @@ class CodeWriter:
         }
         return segment_shorthand.get(segment)
 
-    def write_to_file(self):
-        with open(self.filename + '.asm', 'w') as f:
-            for line in self.assembly_code:
-                f.write("%s\n" % line)
+    def write_command_to_file(self, command):
+        self.f_asm.write(command + '\n')
+
+    def closeFile(self):
+        self.f_asm.close()
 
 
 if __name__ == "__main__":
-    t = Translator(Parser(sys.argv[1]), CodeWriter(sys.argv[1]))
+    t = Translator('BasicLoop.vm')
     t.translate()
