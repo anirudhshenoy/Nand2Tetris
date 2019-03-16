@@ -20,8 +20,13 @@ class Translator:
                 self.codewriter.writeGoTo(self.parser.arg1())
             elif (command_type == 'C_LABEL'):
                 self.codewriter.writeLabel(self.parser.arg1())
+            elif (command_type == 'C_FUNCTION'):
+                self.codewriter.writeFunction(
+                    self.parser.arg1(), self.parser.arg2())
             elif (command_type == 'C_IF'):
                 self.codewriter.writeIf(self.parser.arg1())
+            elif (command_type == 'C_RETURN'):
+                self.codewriter.writeReturn()
             else:
                 self.codewriter.writeArithmetic(command)
         self.codewriter.writeInfiniteLoop()
@@ -90,6 +95,22 @@ class CodeWriter:
 
     def set_file_name(self, filename):
         self.filename = filename
+
+    def writeFunction(self, label, nargs):
+        self.writeLabel(label)
+        self.write_command_to_file('@' + nargs)
+        self.write_command_to_file('D=A')
+        self.write_command_to_file('@SP')
+        self.write_command_to_file('D=M+D')
+        self.write_command_to_file('M=D')
+
+    def writeReturn(self):
+        # TODO : *ARG = pop() done  
+        self.write_command_to_file('@ARG')
+        self.write_command_to_file('A=M')
+        self.write_command_to_file('D=A')
+        self._dec_SP()
+        self._pop_from_stack()
 
     def writeLabel(self, label):
         self.write_command_to_file('(' + label + ')')
@@ -170,6 +191,7 @@ class CodeWriter:
         return
 
     def _pop_from_stack(self):
+        # Ensure Address to pop to is set in D Register
         self.write_command_to_file('@SP')
         self.write_command_to_file('A=M')
         self.write_command_to_file('D=D+M')
