@@ -5,7 +5,8 @@ class Translator:
     def __init__(self, filename):
         self.filename = filename
         self.parser = Parser(filename)
-        self.f_asm = open(filename[:-3] + '.asm', 'w')
+        # self.f_asm = open(filename[:-3] + '.asm', 'w')
+        self.f_asm = open('NestedCall' + '.asm', 'w')
         self.codewriter = CodeWriter(filename, self.f_asm)
 
     def translate(self):
@@ -22,6 +23,9 @@ class Translator:
                 self.codewriter.writeLabel(self.parser.arg1())
             elif (command_type == 'C_FUNCTION'):
                 self.codewriter.writeFunction(
+                    self.parser.arg1(), self.parser.arg2())
+            elif (command_type == 'C_CALL'):
+                self.codewriter.writeCall(
                     self.parser.arg1(), self.parser.arg2())
             elif (command_type == 'C_IF'):
                 self.codewriter.writeIf(self.parser.arg1())
@@ -90,22 +94,63 @@ class Parser:
 class CodeWriter:
     def __init__(self, filename, f_asm):
         self.conditional_index = 0  # Used to create Labels for conditional jumps
+        self.call_index  = 0
         self.filename = filename[:-3]
         self.f_asm = f_asm
 
     def set_file_name(self, filename):
         self.filename = filename
 
+    def writeCall(self, label, nargs):
+        # TODO: push retAddr
+        self.write_command_to_file('@RET_ADDR_' + label + str(self.call_index))
+        self.write_command_to_file('M=A')
+        self.write_command_to_file('D=M')
+        self._push_to_stack()
+        self._inc_SP()
+        for register in (['LCL', 'ARG', 'THIS', 'THAT']):
+            self.write_command_to_file('@' + register)
+            self.write_command_to_file('D=M')
+            self._push_to_stack()
+            self._inc_SP()
+        # ARG = SP-5-nArgs
+        self.write_command_to_file('@SP')
+        self.write_command_to_file('D=M')
+        self.write_command_to_file('@' + str(int(nargs)+5))
+        self.write_command_to_file('D=D-A')
+        self.write_command_to_file('@ARG')
+        self.write_command_to_file('M=D')
+        # LCL = SP
+        self.write_command_to_file('@SP')
+        self.write_command_to_file('D=M')
+        self.write_command_to_file('@LCL')
+        self.write_command_to_file('M=D')
+        self.writeGoTo(label)
+        self.writeLabel('RET_ADDR_' + label + str(self.call_index))
+        self.call_index +=1
+
     def writeFunction(self, label, nargs):
         self.writeLabel(label)
-        self.write_command_to_file('@' + nargs)
-        self.write_command_to_file('D=A')
-        self.write_command_to_file('@SP')
-        self.write_command_to_file('D=M+D')
-        self.write_command_to_file('M=D')
+        for i in range (int(nargs)):
+            self.write_command_to_file('@0')
+            self.write_command_to_file('D=A')
+            self._push_to_stack()
+            self._inc_SP()
 
     def writeReturn(self):
-        # TODO : *ARG = pop() done  
+        # endframe = LCL; retAddr = *(endframe - 5)
+        self.write_command_to_file('@LCL')
+        self.write_command_to_file('D=M')
+        self.write_command_to_file('@5')
+        self.write_command_to_file('D=D-A')
+        self.write_command_to_file('A=D')
+        self.write_command_to_file('D=M')
+        # self.write_command_to_file('A=M')
+        # self.write_command_to_file('D=M')
+        self.write_command_to_file('@R13')
+        self.write_command_to_file('M=D')
+
+        # *ARG = pop()
         self.write_command_to_file('@LCL')
         self.write_command_to_file('D=M')
         self.write_command_to_file('@R14')
@@ -119,30 +164,16 @@ class CodeWriter:
         self.write_command_to_file('D=M+1')
         self.write_command_to_file('@SP')
         self.write_command_to_file('M=D')
-        self.write_command_to_file('@R14')
-        self.write_command_to_file('M=M-1')
+        for register in (['THAT', 'THIS', 'ARG', 'LCL']):
+            self.write_command_to_file('@R14')
+            self.write_command_to_file('M=M-1')
+            self.write_command_to_file('A=M')
+            self.write_command_to_file('D=M')
+            self.write_command_to_file('@' + register)
+            self.write_command_to_file('M=D')
+        self.write_command_to_file('@R13')
         self.write_command_to_file('A=M')
-        self.write_command_to_file('D=M')
-        self.write_command_to_file('@THAT')
-        self.write_command_to_file('M=D')
-        self.write_command_to_file('@R14')
-        self.write_command_to_file('M=M-1')
-        self.write_command_to_file('A=M')
-        self.write_command_to_file('D=M')
-        self.write_command_to_file('@THIS')
-        self.write_command_to_file('M=D')
-        self.write_command_to_file('@R14')
-        self.write_command_to_file('M=M-1')
-        self.write_command_to_file('A=M')
-        self.write_command_to_file('D=M')
-        self.write_command_to_file('@ARG')
-        self.write_command_to_file('M=D')
-        self.write_command_to_file('@R14')
-        self.write_command_to_file('M=M-1')
-        self.write_command_to_file('A=M')
-        self.write_command_to_file('D=M')
-        self.write_command_to_file('@LCL')
-        self.write_command_to_file('M=D')
+        self.write_command_to_file('0;JMP')
 
     def writeLabel(self, label):
         self.write_command_to_file('(' + label + ')')
