@@ -5,14 +5,15 @@ import os
 class Translator:
     def __init__(self, projectname):
         self.projectname = projectname
-        print(projectname)
+        self.parser = Parser()
+        self.f_asm = open(projectname + '.asm', 'w')
+        self.codewriter = CodeWriter(self.f_asm)
         self.retrieve_filenames(self.projectname)
 
     def retrieve_filenames(self, projectname):
         if(os.path.isdir(projectname)):
-            os.chdir(projectname)
-            self.files = [file for file in os.listdir()
-                          if file.endswith('.vm')]
+            self.files = [file for file in os.listdir(
+                projectname) if file.endswith('.vm')]
         elif(os.path.isfile(projectname + '.vm')):
             self.files = [projectname + '.vm']
         else:
@@ -42,19 +43,14 @@ class Translator:
                 self.codewriter.writeReturn()
             else:
                 self.codewriter.writeArithmetic(command)
+        self.codewriter.writeInfiniteLoop()
+        self.codewriter.closeFile()
 
     def translate_all(self):
-        self.parser = Parser()
-        self.f_asm = open(self.projectname + '.asm', 'w')
-        self.codewriter = CodeWriter(self.f_asm)
-        self.codewriter.writeInit()
         for file in self.files:
-            print('Translating ' + file)
             self.parser.openFile(file)
             self.codewriter.set_file_name(file)
             self.translate()
-        # self.codewriter.writeInfiniteLoop()
-        self.codewriter.closeFile()
 
 
 class Parser:
@@ -63,14 +59,8 @@ class Parser:
             self.read_data = f.readlines()
         self.read_data = [
             command[:-1] for command in self.read_data if command[:2] != '//' and command != '\n']
-        print(self.read_data)
-        for i in range(len(self.read_data)):
-            if(self.read_data[i].find('//') != -1):
-                self.read_data[i] = self.read_data[i][:self.read_data[i].find(
-                    '//')].split('  ')[0]
         self.read_data.reverse()
         self.current_command = None
-        print(self.read_data)
 
     def hasMoreCommands(self):
         return True if len(self.read_data) else False
@@ -90,18 +80,9 @@ class Parser:
             'label': 'C_LABEL',
             'if-goto': 'C_IF',
             'return': 'C_RETURN',
-            'call': 'C_CALL',
-            'add': 'C_ARITHMETIC',
-            'sub': 'C_ARITHMETIC',
-            'neg': 'C_ARITHMETIC',
-            'eq': 'C_ARITHMETIC',
-            'gt': 'C_ARITHMETIC',
-            'lt': 'C_ARITHMETIC',
-            'and': 'C_ARITHMETIC',
-            'or': 'C_ARITHMETIC',
-            'not': 'C_ARITHMETIC',
+            'call': 'C_CALL'
         }
-        return commandtype_lookup.get(first_word)
+        return commandtype_lookup.get(first_word, 'C_ARITHMETIC')
 
     def arg1(self):
         if(self.commandType() == 'C_RETURN'):
@@ -135,13 +116,6 @@ class CodeWriter:
     def set_file_name(self, filename):
         self.filename = filename
 
-    def writeInit(self):
-        self.write_command_to_file('@256')
-        self.write_command_to_file('D=A')
-        self.write_command_to_file('@SP')
-        self.write_command_to_file('M=D')
-        self.writeCall('Sys.init', -1)
-
     def writeCall(self, label, nargs):
         # TODO: push retAddr
         self.write_command_to_file('@RET_ADDR_' + label + str(self.call_index))
@@ -155,18 +129,17 @@ class CodeWriter:
             self._push_to_stack()
             self._inc_SP()
         # ARG = SP-5-nArgs
-        if(nargs != -1):                #Skip for Sys.inii
-            self.write_command_to_file('@SP')
-            self.write_command_to_file('D=M')
-            self.write_command_to_file('@' + str(int(nargs)+5))
-            self.write_command_to_file('D=D-A')
-            self.write_command_to_file('@ARG')
-            self.write_command_to_file('M=D')
-            # LCL = SP
-            self.write_command_to_file('@SP')
-            self.write_command_to_file('D=M')
-            self.write_command_to_file('@LCL')
-            self.write_command_to_file('M=D')
+        self.write_command_to_file('@SP')
+        self.write_command_to_file('D=M')
+        self.write_command_to_file('@' + str(int(nargs)+5))
+        self.write_command_to_file('D=D-A')
+        self.write_command_to_file('@ARG')
+        self.write_command_to_file('M=D')
+        # LCL = SP
+        self.write_command_to_file('@SP')
+        self.write_command_to_file('D=M')
+        self.write_command_to_file('@LCL')
+        self.write_command_to_file('M=D')
         self.writeGoTo(label)
         self.writeLabel('RET_ADDR_' + label + str(self.call_index))
         self.call_index += 1
@@ -227,7 +200,7 @@ class CodeWriter:
     def writeIf(self, label):
         self._dec_SP()
         self.write_command_to_file('A=M')
-        self.write_command_to_file('D=-M')
+        self.write_command_to_file('D=M')
         self.write_command_to_file('@' + label)
         self.write_command_to_file('D; JGT')
 
@@ -383,4 +356,4 @@ class CodeWriter:
 
 if __name__ == "__main__":
     t = Translator(sys.argv[1])
-    t.translate_all()
+    t.translate()
