@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 
 
 class JackAnalyzer:
@@ -39,6 +40,21 @@ class JackTokenizer:
     def set_xml_file(self, xml_filename):
         self.f_xml = xml_filename
 
+    # Split string into symbols and alphanumeric word
+    @staticmethod
+    def decompose_string(str):
+        decomposed_str = []
+        word = ''
+        for s in str:
+            if(s.isalnum()):
+                word = ''.join([word, s])
+            else:
+                if(len(word)):
+                    decomposed_str.append(word)
+                decomposed_str.append(s)
+                word = ''
+        return decomposed_str
+
     @staticmethod
     def remove_multiline_comments(file_line):
         if(len(file_line)):
@@ -49,19 +65,32 @@ class JackTokenizer:
         else:
             return False
 
+    @staticmethod
+    def tokenize(lines):
+        tokens = []
+        for line in lines:
+            for l in line.split():
+                if(not l.isalnum()):
+                    for s in JackTokenizer.decompose_string(l):
+                        tokens.append(s)
+                else:
+                    tokens.append(l)
+        print(tokens)
+
     def openFile(self, filename):
         # TODO - Does regex make this easier?
         with open(filename, 'r') as f:
-            self.jack_file_data = f.readlines()
-        self.jack_file_data = [j.strip() for j in self.jack_file_data]
-        for i in range(len(self.jack_file_data)):           # Remove inline comments
-            if(self.jack_file_data[i].find('//') != -1):
-                self.jack_file_data[i] = self.jack_file_data[i][:self.jack_file_data[i].find(
+            jack_file_data = f.readlines()
+        jack_file_data = [j.strip() for j in jack_file_data]
+        for i in range(len(jack_file_data)):           # Remove inline comments
+            if(jack_file_data[i].find('//') != -1):
+                jack_file_data[i] = jack_file_data[i][:jack_file_data[i].find(
                     '//')].split('  ')[0]           # Assuming lines have atleast 2 whitespaces before comment
-        self.jack_file_data = list(filter(
-            self.remove_multiline_comments, self.jack_file_data))
-        print(self.jack_file_data)
-        self.jack_file_data.reverse()
+        jack_file_data = list(filter(
+            self.remove_multiline_comments, jack_file_data))
+        print(jack_file_data)
+        self.tokenize(jack_file_data)
+        # self.jack_file_data.reverse()
 
     def hasMoreTokens(self):
         return len(self.jack_file_data) > 0
@@ -72,14 +101,22 @@ class JackTokenizer:
             return self.current_token
 
     def tokenType(self):
-        # List for keyword
-        keyword = ['class', 'constructor', 'function', 'method', 'field', 'static', 'var', 'int', 'char', 'boolean', 
-                    'void', 'true', 'false', 'null', 'this', 'let', 'do', 'if', 'else', 'while', 'return']
+        first_word = self.current_token.split()[0]
+        keyword = ['class', 'constructor', 'function', 'method', 'field',
+                   'static', 'var', 'int', 'char', 'boolean',
+                   'void', 'true', 'false', 'null', 'this', 'let', 'do',
+                   'if', 'else', 'while', 'return']
         symbol = '{}()[].,;+-*/&|,.=~'
-        if(self.current_token in symbol):
-            return 'SYMBOL'
-        token_lookup = {}
-        pass
+        if(first_word in symbol):
+            return SYMBOL_CONST
+        elif(first_word in keyword):
+            return KEYWORD_CONST
+        elif(first_word[0] == '"'):
+            return STR_CONST
+        elif(first_word[0] == '_' or first_word[0].isalpha()):
+            return IDENTIFIER_CONST
+        elif(first_word.isdigit()):
+            return INT_CONST
 
     def keyWord(self):
         if(self.tokenType() == KEYWORD_CONST):
