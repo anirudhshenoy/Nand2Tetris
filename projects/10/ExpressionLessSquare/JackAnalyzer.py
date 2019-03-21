@@ -1,6 +1,13 @@
 import os
 import sys
-import re
+import xml.etree.ElementTree as ET
+import xml.dom.minidom
+
+SYMBOL_CONST = 'SYMBOL'
+KEYWORD_CONST = 'KEYWORD'
+INTERGER_CONST = 'INT_CONST'
+STRING_CONST = 'STR_CONST'
+IDENTIFIER_CONST = 'IDENTIFIER'
 
 
 class JackAnalyzer:
@@ -17,25 +24,41 @@ class JackAnalyzer:
         else:
             raise Exception('Invalid Directory or Filename')
 
-    def analyze_file(self):
-        pass
+    def analyze_file(self, file):
+        root = ET.Element("tokens")
+        while(self.tokenize.hasMoreTokens()):
+            token = self.tokenize.advance()
+            token_type = self.tokenize.tokenType()
+            if(token_type == SYMBOL_CONST):
+                ET.SubElement(root, "symbol").text = self.tokenize.symbol()
+            elif(token_type == KEYWORD_CONST):
+                ET.SubElement(root, "keyword").text = self.tokenize.keyWord()
+            elif(token_type == INTERGER_CONST):
+                ET.SubElement(root, "integer").text = self.tokenize.intVal()
+            elif(token_type == STRING_CONST):
+                ET.SubElement(root, "string").text = self.tokenize.stringVal()
+            elif(token_type == IDENTIFIER_CONST):
+                ET.SubElement(
+                    root, "identifier").text = self.tokenize.identifier()
+        tree = ET.ElementTree(root)
+        filename = file.split('.')[0] + '.xml'
+        tree.write(filename)
+        dom = xml.dom.minidom.parse(filename)
+        pretty_xml_as_string = dom.toprettyxml()
+        f_xml = open(filename, 'w')
+        f_xml.write(pretty_xml_as_string[pretty_xml_as_string.find('\n')+1:])
+        f_xml.close()
 
     def analyze(self):
         self.tokenize = JackTokenizer()
         for file in self.files:
+            print('Tokenizing file: ' + file)
             self.tokenize.openFile(file)
-            self.f_xml = open(file.split('.')[0]+'.xml', 'w')
-            self.tokenize.set_xml_file(self.f_xml)
-            self.analyze_file()
+            self.analyze_file(file)
+        print('Done!')
 
 
 class JackTokenizer:
-
-    SYMBOL_CONST = 'SYMBOL'
-    KEYWORD_CONST = 'KEYWORD'
-    INTERGER_CONST = 'INT_CONST'
-    STRING_CONST = 'STR_CONST'
-    IDENTIFIER_CONST = 'IDENTIFIER'
 
     def set_xml_file(self, xml_filename):
         self.f_xml = xml_filename
@@ -53,6 +76,8 @@ class JackTokenizer:
                     decomposed_str.append(word)
                 decomposed_str.append(s)
                 word = ''
+        if(len(word)):
+            decomposed_str.append(word)
         return decomposed_str
 
     @staticmethod
@@ -75,7 +100,7 @@ class JackTokenizer:
                         tokens.append(s)
                 else:
                     tokens.append(l)
-        print(tokens)
+        return tokens
 
     def openFile(self, filename):
         # TODO - Does regex make this easier?
@@ -88,16 +113,15 @@ class JackTokenizer:
                     '//')].split('  ')[0]           # Assuming lines have atleast 2 whitespaces before comment
         jack_file_data = list(filter(
             self.remove_multiline_comments, jack_file_data))
-        print(jack_file_data)
-        self.tokenize(jack_file_data)
-        # self.jack_file_data.reverse()
+        self.tokens = self.tokenize(jack_file_data)
+        self.tokens.reverse()
 
     def hasMoreTokens(self):
-        return len(self.jack_file_data) > 0
+        return len(self.tokens) > 0
 
     def advance(self):
         if(self.hasMoreTokens()):
-            self.current_token = self.jack_file_data.pop()
+            self.current_token = self.tokens.pop()
             return self.current_token
 
     def tokenType(self):
@@ -120,23 +144,23 @@ class JackTokenizer:
 
     def keyWord(self):
         if(self.tokenType() == KEYWORD_CONST):
-            pass
+            return self.current_token
 
     def symbol(self):
         if(self.tokenType() == SYMBOL_CONST):
-            pass
+            return self.current_token
 
     def identifier(self):
         if(self.tokenType() == IDENTIFIER_CONST):
-            pass
+            return self.current_token
 
     def intVal(self):
         if(self.tokenType() == INTERGER_CONST):
-            pass
+            return self.current_token
 
     def stringVal(self):
         if(self.tokenType() == STRING_CONST):
-            pass
+            return self.current_token
 
 
 if __name__ == '__main__':
