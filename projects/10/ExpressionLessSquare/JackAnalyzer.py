@@ -8,6 +8,9 @@ KEYWORD_CONST = 'KEYWORD'
 INTERGER_CONST = 'INT_CONST'
 STRING_CONST = 'STR_CONST'
 IDENTIFIER_CONST = 'IDENTIFIER'
+IDENTIFIER = 'identifier'
+KEYWORD = 'keyword'
+SYMBOL = 'symbol'
 
 
 class JackAnalyzer:
@@ -41,7 +44,7 @@ class JackAnalyzer:
                 ET.SubElement(
                     root, "identifier").text = self.tokenize.identifier()
         tree = ET.ElementTree(root)
-        filename = file.split('.')[0] + '.xml'
+        filename = file.split('.')[0] + 'T.xml'
         tree.write(filename)
         dom = xml.dom.minidom.parse(filename)
         pretty_xml_as_string = dom.toprettyxml()
@@ -56,6 +59,177 @@ class JackAnalyzer:
             self.tokenize.openFile(file)
             self.analyze_file(file)
         print('Done!')
+
+
+class CompilationEngine:
+
+    def __init__(self):
+        pass
+
+    def closeFile(self):
+        tree = ET.ElementTree(self.root)
+        tree.write('test.xml')
+        dom = xml.dom.minidom.parse('test.xml')
+        pretty_xml_as_string = dom.toprettyxml()
+        f_xml = open('test.xml', 'w')
+        f_xml.write(pretty_xml_as_string[pretty_xml_as_string.find('\n')+1:])
+        f_xml.close()
+
+    def add_sub_element(self, root, tag):
+        ET.SubElement(root, tag).text = self.current_token.text
+
+    def hasMoreTokens(self):
+        return len(self.tokens) > 0
+
+    def advance(self):
+        if(self.hasMoreTokens()):
+            self.current_token = self.tokens.pop()
+            return self.current_token
+
+    def openXMLFile(self, xml_file):
+        self.xml_tree = ET.parse(xml_file)
+        self.tokens = list(self.xml_tree.getroot())
+        self.tokens.reverse()
+
+    def compileClass(self):
+        self.root = ET.Element('class')
+        self.add_sub_element(self.root, KEYWORD)
+        if self.advance().tag == IDENTIFIER:
+            self.add_sub_element(self.root, IDENTIFIER)
+        if self.advance().text == '{':
+            self.add_sub_element(self.root, SYMBOL)
+            self.advance()
+            if self.current_token.text == 'static' or self.current_token.text == 'field':
+                self.compileClassVarDec()
+            # TODO while True:
+            self.advance()
+            if self.current_token.text == '}':
+                self.add_sub_element(self.root, SYMBOL)
+            else:
+                self.compileSubroutine()
+
+    def compileClassVarDec(self):
+        class_var = ET.SubElement(self.root, 'classVarDec')
+        self.add_sub_element(class_var, KEYWORD)
+        self.advance()
+        if self.compileType(class_var):
+            if self.advance().tag == IDENTIFIER:
+                self.add_sub_element(class_var, IDENTIFIER)
+                while True:
+                    if self.advance().text == ';':
+                        self.add_sub_element(class_var, SYMBOL)
+                        break
+                    elif(self.current_token.text == ','):
+                        self.add_sub_element(class_var, SYMBOL)
+                        if self.advance().tag == IDENTIFIER:
+                            self.add_sub_element(class_var, IDENTIFIER)
+
+    def compileSubroutine(self):
+        if (self.current_token.text == 'constructor' or
+            self.current_token.text == 'function' or
+                self.current_token.text == 'method'):
+            sub_routine = ET.SubElement(self.root, 'subroutineDec')
+            self.add_sub_element(sub_routine, KEYWORD)
+            if self.advance().text == 'void' or self.compileType(sub_routine):
+                self.add_sub_element(sub_routine, KEYWORD)
+                if self.advance().tag == IDENTIFIER:
+                    self.add_sub_element(sub_routine, IDENTIFIER)
+                    if self.advance().text == '(':
+                        self.add_sub_element(sub_routine, SYMBOL)
+                        self.compileParameterList(sub_routine)
+                        # Add Closing parenthesis
+                        self.add_sub_element(sub_routine, SYMBOL)
+                        if self.advance().text == '{':
+                            self.compileSubroutineBody(sub_routine)
+                            self.add_sub_element(sub_routine, SYMBOL)
+
+
+    def compileSubroutineBody(self, root):
+        subroutine_body = ET.SubElement(root, 'subroutineBody')
+        self.add_sub_element(subroutine_body, SYMBOL)
+        while True:
+            self.advance()
+            if self.current_token.text == 'var':
+                self.compileVarDec(subroutine_body)
+                break
+
+
+
+    def compileType(self, root):
+        # TODO Make array of filenames and compare className
+        if self.current_token.text == 'int' or self.current_token.text == 'char' or self.current_token.text == 'boolean' or self.current_token.text == 'SquareGame':
+            self.add_sub_element(root, KEYWORD)
+            return True
+        return False
+
+    def compileParameterList(self, root):
+        parameter_list = ET.SubElement(root, 'parameterList')
+        count_parameters = 0
+        while True:
+            self.advance()
+            if self.compileType(parameter_list):
+                self.advance()
+                if self.compileVarName(parameter_list):
+                    count_parameters += 1
+            elif self.current_token.text == ')':
+                if not count_parameters:
+                    parameter_list.text = ' '
+                    break
+            elif self.current_token.text == ',':
+                self.add_sub_element(parameter_list, SYMBOL)
+
+    def compileVarName(self, root):
+        if self.current_token.tag == IDENTIFIER:
+            self.add_sub_element(root, IDENTIFIER)
+            return True
+        return False
+
+    def compileVarDec(self, root):
+        var_dec = ET.SubElement(root, 'varDec')
+        if self.current_token.text == 'var':
+            self.add_sub_element(var_dec, KEYWORD)
+            while True:
+                self.advance()
+                if self.compileType(var_dec):
+                    self.advance()
+                    if self.compileVarName(var_dec):
+                        continue
+                elif self.current_token.text == ',':
+                    self.add_sub_element(var_dec, SYMBOL)
+                elif self.current_token.text == ';':
+                    self.add_sub_element(var_dec, SYMBOL)
+                    break
+
+                
+
+        pass
+
+    def compileStatements(self):
+        pass
+
+    def compileDo(self):
+        pass
+
+    def compileLet(self):
+        pass
+
+    def compileWhile(self):
+        pass
+
+    def compileReturn(self):
+        pass
+
+    def compileIf(self):
+        pass
+
+    def compileExpression(self):
+        pass
+
+    def compileTerm(self):
+        pass
+
+    def compileExpressionList(self):
+        pass
 
 
 class JackTokenizer:
@@ -164,5 +338,10 @@ class JackTokenizer:
 
 
 if __name__ == '__main__':
-    analyzr = JackAnalyzer(sys.argv[1])
-    analyzr.analyze()
+    # analyzr = JackAnalyzer(sys.argv[1])
+    # analyzr.analyze()
+    compile = CompilationEngine()
+    compile.openXMLFile('Main.xml')
+    compile.advance()
+    compile.compileClass()
+    compile.closeFile()
