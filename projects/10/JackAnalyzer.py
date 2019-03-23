@@ -5,14 +5,14 @@ import xml.dom.minidom
 
 SYMBOL_CONST = 'SYMBOL'
 KEYWORD_CONST = 'KEYWORD'
-INTERGER_CONST = 'INT_CONST'
+INTEGER_CONST = 'INT_CONST'
 STRING_CONST = 'STR_CONST'
 IDENTIFIER_CONST = 'IDENTIFIER'
 IDENTIFIER = 'identifier'
 KEYWORD = 'keyword'
 SYMBOL = 'symbol'
-STRING = 'string'
-INTEGER = 'integer'
+STRING = 'stringConstant'
+INTEGER = 'integerConstant'
 
 
 class JackAnalyzer:
@@ -38,10 +38,10 @@ class JackAnalyzer:
                 ET.SubElement(root, "symbol").text = self.tokenize.symbol()
             elif(token_type == KEYWORD_CONST):
                 ET.SubElement(root, "keyword").text = self.tokenize.keyWord()
-            elif(token_type == INTERGER_CONST):
-                ET.SubElement(root, "integer").text = self.tokenize.intVal()
+            elif(token_type == INTEGER_CONST):
+                ET.SubElement(root, "integerConstant").text = self.tokenize.intVal()
             elif(token_type == STRING_CONST):
-                ET.SubElement(root, "string").text = self.tokenize.stringVal()
+                ET.SubElement(root, "stringConstant").text = self.tokenize.stringVal()
             elif(token_type == IDENTIFIER_CONST):
                 ET.SubElement(
                     root, "identifier").text = self.tokenize.identifier()
@@ -75,6 +75,7 @@ class CompilationEngine:
 
     def __init__(self, files):
         self.classes = [file[:-5] for file in files]
+        self.variables = []
 
     def closeFile(self, file):
         tree = ET.ElementTree(self.root)
@@ -199,6 +200,15 @@ class CompilationEngine:
     def compileVarName(self, root):
         if self.current_token.tag == IDENTIFIER:
             self.add_sub_element(root, IDENTIFIER)
+            self.variables.append
+            if self.tokens[-1].text == '[':
+                self.advance()
+                self.add_sub_element(root, SYMBOL)
+                self.advance()
+                if self.compileExpression(root):
+                    if self.current_token.text == ']':
+                        self.add_sub_element(root, SYMBOL)
+                        return True
             return True
         return False
 
@@ -372,12 +382,22 @@ class CompilationEngine:
     def compileTerm(self, root):
         # TODO Add expressions
         term_statement = ET.SubElement(root, 'term')
-        if (self.compileIntegerConstant(term_statement) or
-            self.compileStringConstant(term_statement) or
-            self.compileKeywordConstant(term_statement) or
-            self.compileVarName(term_statement) or
-            self.compileSubroutineCall(term_statement) or
-                self.compileUnaryOp(term_statement)):
+        if self.tokens[-1].text != '.':
+            if (self.compileIntegerConstant(term_statement) or
+                self.compileStringConstant(term_statement) or
+                self.compileKeywordConstant(term_statement) or
+                self.compileVarName(term_statement) or
+                self.compileSubroutineCall(term_statement) or
+                    self.compileUnaryOp(term_statement)):
+                return True
+            elif self.current_token.text == '(':
+                self.add_sub_element(term_statement, SYMBOL)
+                if self.compileExpression(term_statement):
+                    self.advance()
+                    self.add_sub_element(term_statement, SYMBOL)
+                    return True
+        else:
+            self.compileSubroutineCall(term_statement)
             return True
         return False
 
@@ -493,17 +513,17 @@ class JackTokenizer:
                    'static', 'var', 'int', 'char', 'boolean',
                    'void', 'true', 'false', 'null', 'this', 'let', 'do',
                    'if', 'else', 'while', 'return']
-        symbol = '{}()[].,;+-*/&|,.=~'
+        symbol = '{}()[].,;+-*/&|<>=~'
         if(first_word in symbol):
             return SYMBOL_CONST
         elif(first_word in keyword):
             return KEYWORD_CONST
         elif(first_word[0] == '"'):
-            return STR_CONST
+            return STRING_CONST
         elif(first_word[0] == '_' or first_word[0].isalpha()):
             return IDENTIFIER_CONST
         elif(first_word.isdigit()):
-            return INT_CONST
+            return INTEGER_CONST
 
     def keyWord(self):
         if(self.tokenType() == KEYWORD_CONST):
@@ -518,17 +538,20 @@ class JackTokenizer:
             return self.current_token
 
     def intVal(self):
-        if(self.tokenType() == INTERGER_CONST):
+        if(self.tokenType() == INTEGER_CONST):
             return self.current_token
 
     def stringVal(self):
         if(self.tokenType() == STRING_CONST):
-            return self.current_token
+            temp_string = ''
+            while (self.advance() != '"'):
+                temp_string = ''.join([temp_string, self.current_token])
+            return temp_string
 
 
 if __name__ == '__main__':
     # analyzr = JackAnalyzer(sys.argv[1])
-    analyzr = JackAnalyzer('SquareGame')
+    analyzr = JackAnalyzer('ArrayTest')
     analyzr.analyze()
     # compile = CompilationEngine()
     # compile.openXMLFile('Main.xml')
