@@ -333,7 +333,7 @@ class CompilationEngine:
 
     def compileOp(self, root):
         if (self.current_token.text == '+' or
-            self.current_token.text == '+' or
+            self.current_token.text == '-' or
             self.current_token.text == '*' or
             self.current_token.text == '/' or
             self.current_token.text == '&' or
@@ -355,7 +355,9 @@ class CompilationEngine:
         if (self.current_token.text == '-' or
                 self.current_token.text == '~'):
             self.add_sub_element(root, SYMBOL)
-            return True
+            self.advance()
+            if self.compileTerm(root):
+                return True
         return False
 
     def compileIntegerConstant(self, root):
@@ -392,9 +394,11 @@ class CompilationEngine:
                 return True
             elif self.current_token.text == '(':
                 self.add_sub_element(term_statement, SYMBOL)
+                self.advance()
                 if self.compileExpression(term_statement):
-                    self.advance()
                     self.add_sub_element(term_statement, SYMBOL)
+                    # self.advance()
+                    # self.add_sub_element(term_statement, SYMBOL)
                     return True
         else:
             self.compileSubroutineCall(term_statement)
@@ -468,6 +472,8 @@ class JackTokenizer:
         if(len(file_line)):
             if(file_line[0] == '/'):
                 return False
+            elif(file_line[:2] == '*/'):
+                return False
             else:
                 return True
         else:
@@ -490,10 +496,14 @@ class JackTokenizer:
         with open(filename, 'r') as f:
             jack_file_data = f.readlines()
         jack_file_data = [j.strip() for j in jack_file_data]
+        jack_file_data = [j for j in jack_file_data if j[:2] != '* ']
         for i in range(len(jack_file_data)):           # Remove inline comments
             if(jack_file_data[i].find('//') != -1):
-                jack_file_data[i] = jack_file_data[i][:jack_file_data[i].find(
-                    '//')].split('  ')[0]           # Assuming lines have atleast 2 whitespaces before comment
+                str_split = jack_file_data[i][:jack_file_data[i].find(
+                    '//')].split('  ')
+                jack_file_data[i] = str_split[0]           # Assuming lines have atleast 2 whitespaces before comment
+                if len(str_split) > 1 and str_split[1][:2] != '//':
+                    jack_file_data[i] += str_split[1]
         jack_file_data = list(filter(
             self.remove_multiline_comments, jack_file_data))
         self.tokens = self.tokenize(jack_file_data)
@@ -551,7 +561,7 @@ class JackTokenizer:
 
 if __name__ == '__main__':
     # analyzr = JackAnalyzer(sys.argv[1])
-    analyzr = JackAnalyzer('ArrayTest')
+    analyzr = JackAnalyzer('Square')
     analyzr.analyze()
     # compile = CompilationEngine()
     # compile.openXMLFile('Main.xml')
