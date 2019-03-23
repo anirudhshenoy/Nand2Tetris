@@ -11,6 +11,8 @@ IDENTIFIER_CONST = 'IDENTIFIER'
 IDENTIFIER = 'identifier'
 KEYWORD = 'keyword'
 SYMBOL = 'symbol'
+STRING = 'string'
+INTEGER = 'integer'
 
 
 class JackAnalyzer:
@@ -102,11 +104,12 @@ class CompilationEngine:
             if self.current_token.text == 'static' or self.current_token.text == 'field':
                 self.compileClassVarDec()
             # TODO while True:
-            self.advance()
-            if self.current_token.text == '}':
-                self.add_sub_element(self.root, SYMBOL)
-            else:
-                self.compileSubroutine()
+            for i in range(3):
+                self.advance()
+                if self.current_token.text == '}':
+                    self.add_sub_element(self.root, SYMBOL)
+                else:
+                    self.compileSubroutine()
 
     def compileClassVarDec(self):
         class_var = ET.SubElement(self.root, 'classVarDec')
@@ -141,8 +144,8 @@ class CompilationEngine:
                         self.add_sub_element(sub_routine, SYMBOL)
                         if self.advance().text == '{':
                             self.compileSubroutineBody(sub_routine)
+                            # ADd closing parenthesis
                             self.add_sub_element(sub_routine, SYMBOL)
-
 
     def compileSubroutineBody(self, root):
         subroutine_body = ET.SubElement(root, 'subroutineBody')
@@ -151,9 +154,10 @@ class CompilationEngine:
             self.advance()
             if self.current_token.text == 'var':
                 self.compileVarDec(subroutine_body)
+            elif self.compileStatements(subroutine_body):
+                continue
+            elif self.current_token.text == '}':
                 break
-
-
 
     def compileType(self, root):
         # TODO Make array of filenames and compare className
@@ -200,36 +204,152 @@ class CompilationEngine:
                     self.add_sub_element(var_dec, SYMBOL)
                     break
 
-                
+    def compileStatements(self, root):
+        # TODO - Run while loop here to compile statements till }
+        statements = ET.SubElement(root, 'statements')
+        if self.current_token.text == 'let':
+            self.compileLet(statements)
+        elif self.current_token.text == 'if':
+            self.compileIf(statements)
+        elif self.current_token.text == 'while':
+            self.compileWhile(statements)
+        elif self.current_token.text == 'do':
+            self.compileDo(statements)
+        elif self.current_token.text == 'return':
+            self.compileReturn(statements)
 
+    def compileDo(self, root):
+        do_statement = ET.SubElement(root, 'doStatements')
+        self.add_sub_element(do_statement, KEYWORD)     # Add 'do' Keyword
+        self.advance()
+        self.compileSubroutineCall(do_statement)
+        self.advance()
+
+    def compileLet(self, root):
+        let_statement = ET.SubElement(root, 'letStatement')
+        self.add_sub_element(let_statement, KEYWORD)    # Add 'let' Keyword
+        self.advance()
+        if self.compileVarName(let_statement):
+            self.advance()
+            if self.current_token.text == '[':
+                self.add_sub_element(let_statement, SYMBOL)
+                self.advance()
+                self.compileExpression(let_statement)
+                self.add_sub_element(let_statement, SYMBOL)     # Add Closing ]
+            elif self.current_token.text == '=':
+                self.add_sub_element(let_statement, SYMBOL)
+                self.advance()
+                self.compileExpression(let_statement)
+            if self.advance().text == ';':
+                self.add_sub_element(let_statement, SYMBOL)
+
+    def compileWhile(self, root):
+        while_statement = ET.SubElement(root, 'whileStatement')
+        self.add_sub_element(while_statement, KEYWORD)  # Add while keyword
+        if self.advance().text == '(':
+            self.add_sub_element(while_statement, SYMBOL)
+            self.advance()
+            if self.compileExpression():
+                self.add_sub_element(if_statement, SYMBOL)      # Add closing )
+                if self.advance().text == '{':
+                    self.add_sub_element(if_statement, SYMBOL)
+                    self.compileStatements(if_statement)
+                    self.add_sub_element(if_statement, SYMBOL)  # Add closing }
+
+    def compileReturn(self, root):
+        do_statement = ET.SubElement(root, 'doStatements)
+        self.add_sub_element(do_statement, KEYWORD)  # Add do keyword
+        self.advance()
+        self.compileSubroutineCall(do_statement)
+        if self.advance().text == ';':
+            self.add_sub_element(do_statement, SYMBOL)
+
+    def compileIf(self, root):
+        if_statement = ET.SubElement(root, 'ifStatement')
+        self.add_sub_element(if_statement, KEYWORD)     # Add if keyword
+        if self.advance().text == '(':
+            self.add_sub_element(if_statement, SYMBOL)
+            self.advance()
+            if self.compileExpression(root):
+                self.add_sub_element(if_statement, SYMBOL)      # Add closing )
+                if self.advance().text == '{':
+                    self.add_sub_element(if_statement, SYMBOL)
+                    self.compileStatements(if_statement)
+                    self.add_sub_element(if_statement, SYMBOL)  # Add closing }
+                    if self.advance().text == 'else':
+                        self.add_sub_element(if_statement, KEYWORD)
+                        if self.advance().text == '{':
+                            self.add_sub_element(if_statement, SYMBOL)
+                            self.compileStatements(if_statement)
+                            # Add closing }
+                            self.add_sub_element(if_statement, SYMBOL)
+
+    def compileExpression(self, root):
+        expression_tag = ET.SubElement(root, 'expression')
+        self.compileTerm(expression_tag)
+
+    def compileClassName(self, root):
         pass
 
-    def compileStatements(self):
+    def compileUnaryOp(self, root):
         pass
 
-    def compileDo(self):
-        pass
+    def compileIntegerConstant(self, root):
+        if self.current_token.tag == INTEGER:
+            self.add_sub_element(root, INTEGER)
+            return True
+        return False
 
-    def compileLet(self):
-        pass
+    def compileStringConstant(self, root):
+        if self.current_token.tag == STRING:
+            self.add_sub_element(root, STRING)
+            return True
+        return False
 
-    def compileWhile(self):
-        pass
+    def compileKeywordConstant(self, root):
+        if (self.current_token.text == 'true' or
+            self.current_token.text == 'false' or
+            self.current_token.text == 'null' or
+                self.current_token.text == 'this'):
+            self.add_sub_element(root, KEYWORD)
+            return True
+        return False
 
-    def compileReturn(self):
-        pass
-
-    def compileIf(self):
-        pass
-
-    def compileExpression(self):
-        pass
-
-    def compileTerm(self):
-        pass
+    def compileTerm(self, root):
+        # TODO Add expressions
+        term_statement = ET.SubElement(root, 'term')
+        if (self.compileIntegerConstant(term_statement) or
+            self.compileStringConstant(term_statement) or
+            self.compileKeywordConstant(term_statement) or
+            self.compileVarName(term_statement) or
+            self.compileSubroutineCall(term_statement) or
+                self.compileUnaryOp(term_statement)):
 
     def compileExpressionList(self):
         pass
+
+    def compileSubroutineCall(self, root):
+        if self.current_token.tag == IDENTIFIER:
+            self.add_sub_element(root, IDENTIFIER)  # Add subroutineName
+            self.advance()
+            if self.current_token.text == '(':
+                self.add_sub_element(root, SYMBOL)
+                self.compileExpressionList(root)
+                self.add_sub_element(root, SYMBOL)  # Add closing )
+            elif self.compileVarName(root) or self.compileClassName(root):
+                pass
+            if self.advance().text == '.':
+                self.add_sub_element(root, SYMBOL)
+                if self.advance().tag == IDENTIFIER:
+                    self.add_sub_element(root, IDENTIFIER)
+                    if self.advance().text == '(':
+                        self.add_sub_element(root, SYMBOL)
+                        self.advance()
+                        self.compileExpressionList(root)
+                        self.add_sub_element(root, SYMBOL)  # Add closing )
+                        return True
+        return False
+
 
 
 class JackTokenizer:
