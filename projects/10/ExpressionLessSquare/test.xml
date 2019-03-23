@@ -24,91 +24,29 @@
 				<symbol>;</symbol>
 			</varDec>
 			<statements>
-				<letStatements>
+				<letStatement>
 					<keyword>let</keyword>
 					<identifier>game</identifier>
 					<symbol>=</symbol>
-					<symbol>;</symbol>
-				</letStatements>
-			</statements>
-			<statements>
+					<expression>
+						<term>
+							<identifier>game</identifier>
+						</term>
+					</expression>
+				</letStatement>
 				<doStatements>
 					<keyword>do</keyword>
 					<identifier>game</identifier>
 				</doStatements>
-			</statements>
-			<statements/>
-			<statements/>
-			<statements>
 				<doStatements>
 					<keyword>do</keyword>
 					<identifier>game</identifier>
 				</doStatements>
-			</statements>
-			<statements/>
-			<statements/>
-			<statements>
 				<doStatements>
 					<keyword>return</keyword>
-					<identifier>;</identifier>
 				</doStatements>
 			</statements>
-			<statements/>
-			<statements/>
-			<statements/>
-			<statements/>
-			<varDec>
-				<keyword>var</keyword>
-				<keyword>int</keyword>
-				<identifier>i</identifier>
-				<symbol>,</symbol>
-				<symbol>;</symbol>
-			</varDec>
-			<varDec>
-				<keyword>var</keyword>
-				<symbol>;</symbol>
-			</varDec>
-			<varDec>
-				<keyword>var</keyword>
-				<symbol>;</symbol>
-			</varDec>
-			<statements>
-				<ifStatements>
-					<keyword>if</keyword>
-					<symbol>(</symbol>
-				</ifStatements>
-			</statements>
-			<statements/>
-			<statements/>
-			<statements>
-				<letStatements>
-					<keyword>let</keyword>
-					<identifier>s</identifier>
-					<symbol>=</symbol>
-					<symbol>;</symbol>
-				</letStatements>
-			</statements>
-			<statements>
-				<letStatements>
-					<keyword>let</keyword>
-					<identifier>s</identifier>
-					<symbol>=</symbol>
-					<symbol>;</symbol>
-				</letStatements>
-			</statements>
-			<statements>
-				<letStatements>
-					<keyword>let</keyword>
-					<identifier>a</identifier>
-					<symbol>[</symbol>
-					<symbol>i</symbol>
-				</letStatements>
-			</statements>
-			<statements/>
-			<statements/>
-			<statements/>
-			<statements/>
 		</subroutineBody>
-		<symbol>}</symbol>
+		<symbol>{</symbol>
 	</subroutineDec>
 </class>
