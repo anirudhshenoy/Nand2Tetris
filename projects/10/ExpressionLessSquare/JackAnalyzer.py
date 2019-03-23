@@ -155,7 +155,7 @@ class CompilationEngine:
             else:
                 break
         self.compileStatements(subroutine_body)
-        self.add_sub_element(subroutine_body, SYMBOL) # Add closing }
+        self.add_sub_element(subroutine_body, SYMBOL)  # Add closing }
 
     def compileType(self, root):
         # TODO Make array of filenames and compare className
@@ -290,7 +290,7 @@ class CompilationEngine:
                             self.add_sub_element(if_statement, SYMBOL)
 
     def compileExpression(self, root):
-        expression_tag = ET.SubElement(root, 'expression') 
+        expression_tag = ET.SubElement(root, 'expression')
         if self.compileTerm(expression_tag):
             while True:
                 self.advance()
