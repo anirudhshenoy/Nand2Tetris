@@ -144,8 +144,6 @@ class CompilationEngine:
                         self.add_sub_element(sub_routine, SYMBOL)
                         if self.advance().text == '{':
                             self.compileSubroutineBody(sub_routine)
-                            # ADd closing parenthesis
-                            self.add_sub_element(sub_routine, SYMBOL)
 
     def compileSubroutineBody(self, root):
         subroutine_body = ET.SubElement(root, 'subroutineBody')
@@ -157,6 +155,7 @@ class CompilationEngine:
             else:
                 break
         self.compileStatements(subroutine_body)
+        self.add_sub_element(subroutine_body, SYMBOL) # Add closing }
 
     def compileType(self, root):
         # TODO Make array of filenames and compare className
@@ -194,9 +193,9 @@ class CompilationEngine:
             while True:
                 self.advance()
                 if self.compileType(var_dec):
-                    self.advance()
-                    if self.compileVarName(var_dec):
-                        continue
+                    continue
+                elif self.compileVarName(var_dec):
+                    continue
                 elif self.current_token.text == ',':
                     self.add_sub_element(var_dec, SYMBOL)
                 elif self.current_token.text == ';':
@@ -217,17 +216,17 @@ class CompilationEngine:
                 self.compileDo(statements)
             elif self.current_token.text == 'return':
                 self.compileReturn(statements)
-            elif self.current_token.text == '{':
+            elif self.current_token.text == '}':
                 break
-            else:
-                self.advance()
+            self.advance()
 
     def compileDo(self, root):
         do_statement = ET.SubElement(root, 'doStatements')
         self.add_sub_element(do_statement, KEYWORD)     # Add 'do' Keyword
         self.advance()
         self.compileSubroutineCall(do_statement)
-        self.advance()
+        if self.advance().text == ';':
+            self.add_sub_element(do_statement, SYMBOL)
 
     def compileLet(self, root):
         let_statement = ET.SubElement(root, 'letStatement')
@@ -240,11 +239,12 @@ class CompilationEngine:
                 self.advance()
                 self.compileExpression(let_statement)
                 self.add_sub_element(let_statement, SYMBOL)     # Add Closing ]
-            elif self.current_token.text == '=':
+                self.advance()
+            if self.current_token.text == '=':
                 self.add_sub_element(let_statement, SYMBOL)
                 self.advance()
                 self.compileExpression(let_statement)
-            if self.advance().text == ';':
+            if self.current_token.text == ';':
                 self.add_sub_element(let_statement, SYMBOL)
 
     def compileWhile(self, root):
@@ -261,12 +261,13 @@ class CompilationEngine:
                     self.add_sub_element(if_statement, SYMBOL)  # Add closing }
 
     def compileReturn(self, root):
-        do_statement = ET.SubElement(root, 'doStatements')
-        self.add_sub_element(do_statement, KEYWORD)  # Add do keyword
+        return_statement = ET.SubElement(root, 'returnStatement')
+        self.add_sub_element(return_statement, KEYWORD)  # Add do keyword
         self.advance()
-        self.compileSubroutineCall(do_statement)
-        if self.advance().text == ';':
-            self.add_sub_element(do_statement, SYMBOL)
+        if self.compileExpression(return_statement):
+            self.advance()
+        if self.current_token.text == ';':
+            self.add_sub_element(return_statement, SYMBOL)
 
     def compileIf(self, root):
         if_statement = ET.SubElement(root, 'ifStatement')
@@ -274,7 +275,7 @@ class CompilationEngine:
         if self.advance().text == '(':
             self.add_sub_element(if_statement, SYMBOL)
             self.advance()
-            if self.compileExpression(root):
+            if self.compileExpression(if_statement):
                 self.add_sub_element(if_statement, SYMBOL)      # Add closing )
                 if self.advance().text == '{':
                     self.add_sub_element(if_statement, SYMBOL)
@@ -289,15 +290,17 @@ class CompilationEngine:
                             self.add_sub_element(if_statement, SYMBOL)
 
     def compileExpression(self, root):
-        expression_tag = ET.SubElement(root, 'expression')
-        self.compileTerm(expression_tag)
-        while True:
-            self.advance()
-            if self.compileOp(expression_tag):
+        expression_tag = ET.SubElement(root, 'expression') 
+        if self.compileTerm(expression_tag):
+            while True:
                 self.advance()
-                self.compileTerm(expression_tag)
-            else:
-                break
+                if self.compileOp(expression_tag):
+                    self.advance()
+                    self.compileTerm(expression_tag)
+                else:
+                    break
+            return True
+        return False
 
     def compileOp(self, root):
         if (self.current_token.text == '+' or
@@ -358,8 +361,9 @@ class CompilationEngine:
         return False
 
     def compileExpressionList(self, root):
-        self.compileExpression(root)
-        if self.advance().text == ',':
+        expression_list = ET.SubElement(root, 'expressionList')
+        self.compileExpression(expression_list)
+        if self.current_token.text == ',':
             self.add_sub_element(root, SYMBOL)
             self.compileExpressionList(root)
 
@@ -372,16 +376,17 @@ class CompilationEngine:
                 self.advance()
                 self.compileExpressionList(root)
                 self.add_sub_element(root, SYMBOL)  # Add closing )
+                self.advance()
             elif self.compileVarName(root) or self.compileClassName(root):
-                pass
-            if self.advance().text == '.':
+                self.advance()
+            if self.current_token.text == '.':
                 self.add_sub_element(root, SYMBOL)
                 if self.advance().tag == IDENTIFIER:
                     self.add_sub_element(root, IDENTIFIER)
                     if self.advance().text == '(':
                         self.add_sub_element(root, SYMBOL)
-                        self.advance()
                         self.compileExpressionList(root)
+                        self.advance()
                         self.add_sub_element(root, SYMBOL)  # Add closing )
                         return True
         return False
