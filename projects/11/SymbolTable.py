@@ -1,9 +1,9 @@
 import json
 
-STATIC_CONSTANT = 'STATIC'
-FIELD_CONSTANT = 'FIELD'
-ARG_CONSTANT = 'ARG'
-VAR_CONSTANT = 'VAR'
+STATIC_CONSTANT = 'static'
+FIELD_CONSTANT = 'field'
+ARG_CONSTANT = 'arg'
+VAR_CONSTANT = 'var'
 
 
 class SymbolTable:

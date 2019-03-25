@@ -1,0 +1,42 @@
+SEGMENT_CONSTANT = 'constant'
+SEGMENT_TEMP = 'temp'
+SEGMENT_POINTER = 'pointer'
+
+
+class VMWriter:
+    def __init__(self, filename):
+        self.current_class = filename[:-3]
+        self.f_vm = open(filename, 'w')
+
+    def writePush(self, segment, index):
+        self.f_vm.write('push ' + segment + ' ' + str(index) + '\n')
+
+    def writePop(self, segment, index):
+        self.f_vm.write('pop ' + segment + ' ' + str(index) + '\n')
+
+    def writeArithmetic(self, command):
+        self.f_vm.write(command + '\n')
+
+    def writeLabel(self, label):
+        pass
+
+    def writeGoto(self, label):
+        pass
+
+    def writeIf(self, label):
+        pass
+
+    def writeCall(self, name, nArgs):
+        self.f_vm.write('call ' + name + ' ' + str(nArgs) + '\n')
+        #self.writePop(SEGMENT_TEMP, 0)
+
+    def writeFunction(self, name, nLocals):
+        self.f_vm.write('function ' + self.current_class +
+                        '.' + name + ' ' + str(nLocals) + '\n')
+
+    def writeReturn(self):
+        self.f_vm.write('return' + '\n')
+        pass
+
+    def close(self):
+        self.f_vm.close()
