@@ -384,6 +384,7 @@ class CompilationEngine:
         return False
 
     def compileTerm(self, root):
+        # TODO Add expressions
         term_statement = ET.SubElement(root, 'term')
         if self.tokens[-1].text != '.':
             if (self.compileIntegerConstant(term_statement) or
