@@ -44,6 +44,7 @@ class SymbolTableTest(unittest.TestCase):
     def test_h_should_return_kind(self):
         self.assertEqual(self.st.kindOf('pointX'), ARG_CONSTANT)
         self.assertEqual(self.st.kindOf('pointY'), VAR_CONSTANT)
+        print(self.st)
 
 if __name__ == '__main__':
     unittest.main()

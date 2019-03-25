@@ -52,9 +52,11 @@ class SymbolTable:
         else:
             return self.class_table[name].get('type')
 
-
     def indexOf(self, name):
-        pass
+        if(self.inSubroutine):
+            return self.subroutine_table[name].get('index')
+        else:
+            return self.class_table[name].get('index')
 
     def __repr__(self):
         string = 'Class Table: \n'
