@@ -55,7 +55,6 @@
 				</doStatement>
 				<returnStatement>
 					<keyword>return</keyword>
-					<symbol>;</symbol>
 				</returnStatement>
 			</statements>
 			<symbol>}</symbol>
@@ -66,10 +65,7 @@
 		<keyword>void</keyword>
 		<identifier>convert</identifier>
 		<symbol>(</symbol>
-		<parameterList>
-			<keyword>int</keyword>
-			<identifier>value</identifier>
-		</parameterList>
+		<parameterList/>
 		<symbol>)</symbol>
 		<subroutineBody>
 			<symbol>{</symbol>
@@ -118,8 +114,6 @@
 							</expression>
 						</letStatement>
 						<ifStatement>
-							<keyword>if</keyword>
-							<symbol>(</symbol>
 							<expression>
 								<term>
 									<term>
@@ -130,26 +124,132 @@
 									</term>
 								</term>
 							</expression>
-						</ifStatement>
-						<ifStatement>
-							<keyword>if</keyword>
-							<symbol>(</symbol>
-							<expression>
-								<term>
-									<term>
-										<expression>
+							<statements>
+								<ifStatement>
+									<expression>
+										<term>
 											<term>
+												<expression>
+													<term>
+														<expression>
+															<term/>
+															<term/>
+														</expression>
+													</term>
+													<term/>
+												</expression>
+											</term>
+										</term>
+									</expression>
+									<statements>
+										<doStatement>
+											<keyword>do</keyword>
+											<identifier>Memory</identifier>
+											<symbol>.</symbol>
+											<identifier>poke</identifier>
+											<expressionList>
 												<expression>
 													<term/>
 													<term/>
 												</expression>
-											</term>
-											<term/>
-										</expression>
-									</term>
-								</term>
-							</expression>
+												<symbol>,</symbol>
+											</expressionList>
+											<symbol>;</symbol>
+										</doStatement>
+									</statements>
+									<statements>
+										<doStatement>
+											<keyword>do</keyword>
+											<identifier>Memory</identifier>
+											<symbol>.</symbol>
+											<identifier>poke</identifier>
+											<expressionList>
+												<expression>
+													<term/>
+													<term/>
+												</expression>
+												<symbol>,</symbol>
+											</expressionList>
+											<symbol>;</symbol>
+										</doStatement>
+									</statements>
+								</ifStatement>
+							</statements>
+							<statements>
+								<letStatement>
+									<keyword>let</keyword>
+									<symbol>=</symbol>
+									<expression>
+										<term/>
+									</expression>
+								</letStatement>
+							</statements>
 						</ifStatement>
+					</statements>
+				</whileStatement>
+				<returnStatement>
+					<keyword>return</keyword>
+				</returnStatement>
+			</statements>
+			<symbol>}</symbol>
+		</subroutineBody>
+	</subroutineDec>
+	<subroutineDec>
+		<keyword>function</keyword>
+		<keyword>int</keyword>
+		<identifier>nextMask</identifier>
+		<symbol>(</symbol>
+		<parameterList/>
+		<symbol>)</symbol>
+		<subroutineBody>
+			<symbol>{</symbol>
+			<statements>
+				<ifStatement>
+					<expression>
+						<term/>
+						<term/>
+					</expression>
+					<statements>
+						<returnStatement>
+							<keyword>return</keyword>
+							<expression>
+								<term/>
+							</expression>
+						</returnStatement>
+					</statements>
+					<statements>
+						<returnStatement>
+							<keyword>return</keyword>
+							<expression>
+								<term/>
+								<term/>
+							</expression>
+						</returnStatement>
+					</statements>
+				</ifStatement>
+			</statements>
+			<symbol>}</symbol>
+		</subroutineBody>
+	</subroutineDec>
+	<subroutineDec>
+		<keyword>function</keyword>
+		<keyword>void</keyword>
+		<identifier>fillMemory</identifier>
+		<symbol>(</symbol>
+		<parameterList>
+			<symbol>,</symbol>
+			<symbol>,</symbol>
+		</parameterList>
+		<symbol>)</symbol>
+		<subroutineBody>
+			<symbol>{</symbol>
+			<statements>
+				<whileStatement>
+					<expression>
+						<term/>
+						<term/>
+					</expression>
+					<statements>
 						<doStatement>
 							<keyword>do</keyword>
 							<identifier>Memory</identifier>
@@ -158,28 +258,32 @@
 							<expressionList>
 								<expression>
 									<term/>
-									<term/>
 								</expression>
 								<symbol>,</symbol>
 							</expressionList>
 							<symbol>;</symbol>
 						</doStatement>
+						<letStatement>
+							<keyword>let</keyword>
+							<symbol>=</symbol>
+							<expression>
+								<term/>
+								<term/>
+							</expression>
+						</letStatement>
+						<letStatement>
+							<keyword>let</keyword>
+							<symbol>=</symbol>
+							<expression>
+								<term/>
+								<term/>
+							</expression>
+						</letStatement>
 					</statements>
 				</whileStatement>
-				<doStatement>
-					<keyword>do</keyword>
-					<identifier>Memory</identifier>
-					<symbol>.</symbol>
-					<identifier>poke</identifier>
-					<expressionList>
-						<expression>
-							<term/>
-							<term/>
-						</expression>
-						<symbol>,</symbol>
-					</expressionList>
-					<symbol>;</symbol>
-				</doStatement>
+				<returnStatement>
+					<keyword>return</keyword>
+				</returnStatement>
 			</statements>
 			<symbol>}</symbol>
 		</subroutineBody>

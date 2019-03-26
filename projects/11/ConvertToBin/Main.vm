@@ -9,6 +9,7 @@ call Memory.peek 1
 pop local 0
 push local 0
 call Main.convert 1
+push constant 0
 return
 function Main.convert 3
 push constant 1
@@ -16,7 +17,7 @@ neg
 pop local 2
 label LOOP_0
 push local 2
-neg
+not
 if-goto EXIT_0
 push local 1
 push constant 1
@@ -29,20 +30,72 @@ push local 1
 push constant 16
 gt
 not
+not
+if-goto IF_0
 push argument 0
 push local 0
+and
 push constant 0
 eq
 not
+not
+if-goto IF_1
 push constant 8000
 push local 1
 add
 push constant 1
 call Memory.poke 2
-goto LOOP_0
-label EXIT_0
+goto ELSE_1
+label IF_1
 push constant 8000
 push local 1
 add
 push constant 0
 call Memory.poke 2
+label ELSE_1
+goto ELSE_0
+label IF_0
+push constant 0
+pop local 2
+label ELSE_0
+goto LOOP_0
+label EXIT_0
+push constant 0
+return
+function Main.nextMask 0
+push argument 0
+push constant 0
+eq
+not
+if-goto IF_2
+push constant 1
+return
+goto ELSE_2
+label IF_2
+push argument 0
+push constant 2
+call Math.multiply 2
+return
+label ELSE_2
+function Main.fillMemory 0
+label LOOP_1
+push argument 1
+push constant 0
+gt
+not
+if-goto EXIT_1
+push argument 0
+push argument 2
+call Memory.poke 2
+push argument 1
+push constant 1
+sub
+pop argument 1
+push argument 0
+push constant 1
+add
+pop argument 0
+goto LOOP_1
+label EXIT_1
+push constant 0
+return

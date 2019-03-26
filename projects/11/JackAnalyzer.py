@@ -213,10 +213,8 @@ class CompilationEngine:
         while True:
             self.advance()
             if self.current_token.tag == KEYWORD:
-                self.add_sub_element(parameter_list, KEYWORD)
                 type = self.current_token.text
                 self.advance()
-                self.add_sub_element(parameter_list, IDENTIFIER)
                 name = self.current_token.text
                 self.st.define(name, type, ARG_CONSTANT)
                 count_parameters += 1
@@ -332,12 +330,12 @@ class CompilationEngine:
         self.vm.writeLabel(while_label)
         self.advance()
         self.compileExpression(while_statement)
-        self.vm.writeArithmetic('neg')
+        self.vm.writeArithmetic('not')
         self.vm.writeIf(exit_label)
         if self.advance().text == '{':
+            self.advance()                                          #skip opening {
             self.compileStatements(while_statement)
             # Add closing }
-            self.advance()
             self.vm.writeGoto(while_label)
             self.vm.writeLabel(exit_label)
 
@@ -347,30 +345,32 @@ class CompilationEngine:
         self.advance()
         if self.current_token.text != ';':
             self.compileExpression(return_statement)
-        if self.current_token.text == ';':
-            self.add_sub_element(return_statement, SYMBOL)
-            self.vm.writeReturn()
+            # self.advance()                              # Skip ;
+        else:
+            self.vm.writePush(SEGMENT_CONSTANT, 0)
+        self.vm.writeReturn()
+
 
     def compileIf(self, root):
         if_statement = ET.SubElement(root, 'ifStatement')
-        self.add_sub_element(if_statement, KEYWORD)     # Add if keyword
-        if self.advance().text == '(':
-            self.add_sub_element(if_statement, SYMBOL)
-            self.advance()
-            if self.compileExpression(if_statement):
-                self.add_sub_element(if_statement, SYMBOL)      # Add closing )
-                if self.advance().text == '{':
-                    self.add_sub_element(if_statement, SYMBOL)
-                    self.compileStatements(if_statement)
-                    self.add_sub_element(if_statement, SYMBOL)  # Add closing }
-                    if self.tokens[-1].text == 'else':
-                        self.advance()
-                        self.add_sub_element(if_statement, KEYWORD)
-                        if self.advance().text == '{':
-                            self.add_sub_element(if_statement, SYMBOL)
-                            self.compileStatements(if_statement)
-                            # Add closing }
-                            self.add_sub_element(if_statement, SYMBOL)
+        if_label = self.get_label(IF_LABEL)
+        else_label = self.get_label(ELSE_LABEL)
+        self.advance()                                      # Skip if statement
+        self.advance()                                      # Skip opening (
+        self.compileExpression(if_statement)
+        self.vm.writeArithmetic('not')
+        self.vm.writeIf(if_label)
+        self.advance()                                      # Skip closing )
+        self.advance()                                      # Skip opening {
+        self.compileStatements(if_statement)
+        self.vm.writeGoto(else_label)
+        self.vm.writeLabel(if_label)
+        self.advance()                                      # Skip closing }
+        if self.current_token.text == 'else':
+            self.advance()                                  # Skip else statement
+            self.advance()                                  # Skip opening {
+            self.compileStatements(if_statement)
+            self.vm.writeLabel(else_label)
 
     def compileExpression(self, root):
         expression_tag = ET.SubElement(root, 'expression')
@@ -394,6 +394,8 @@ class CompilationEngine:
             self.vm.writeCall('Math.multiply', 2)
         elif (self.current_token.text == '/'):
             self.vm.writeCall('Math.divide', 2)
+        elif (self.current_token.text == '&'):
+            self.vm.writeArithmetic('and')
         elif (self.current_token.text == '|'):
             self.vm.writeArithmetic('or')
         elif (self.current_token.text == '<'):
