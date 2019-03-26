@@ -92,6 +92,16 @@ class CompilationEngine:
         self.counter[label] += 1
         return generated_label
 
+    def get_segment(self, var_name):
+        segment = self.st.kindOf(var_name)
+        segment_dict = {
+            VAR_CONSTANT: SEGMENT_LOCAL,
+            ARG_CONSTANT: SEGMENT_ARGUMENT,
+            FIELD_CONSTANT: 'this',
+            STATIC_CONSTANT: SEGMENT_STATIC,
+        }
+        return segment_dict.get(segment)
+
     def closeFile(self, file):
         print(self.st)
         self.vm.close()
@@ -119,7 +129,8 @@ class CompilationEngine:
         self.tokens = list(self.xml_tree.getroot())
         self.tokens.reverse()
         self.st = SymbolTable()
-        self.vm = VMWriter(xml_file[:-5] + '.vm')
+        self.current_class = xml_file[:-5]
+        self.vm = VMWriter(self.current_class + '.vm')
 
     def compileClass(self):
         self.root = ET.Element('class')
@@ -164,37 +175,41 @@ class CompilationEngine:
 
     def compileSubroutine(self):
         self.st.startSubroutine()
+        subroutine_type = self.current_token.text
         if (self.current_token.text == 'constructor' or
             self.current_token.text == 'function' or
                 self.current_token.text == 'method'):           # TODO add this in ST for method
             sub_routine = ET.SubElement(self.root, 'subroutineDec')
-            self.add_sub_element(sub_routine, KEYWORD)
             self.advance()
-            if self.compileType(sub_routine):
-                if self.advance().tag == IDENTIFIER:
-                    self.add_sub_element(sub_routine, IDENTIFIER)
-                    function_name = self.current_token.text
-                    if self.advance().text == '(':
-                        self.add_sub_element(sub_routine, SYMBOL)
-                        self.compileParameterList(sub_routine)
-                        # Add Closing parenthesis
-                        self.add_sub_element(sub_routine, SYMBOL)
-                        if self.advance().text == '{':
-                            self.compileSubroutineBody(
-                                sub_routine, function_name)
+            self.compileType(sub_routine)
+            self.advance()
+            subroutine_name = self.current_token.text
+            self.advance()                                      # Skip opening (
+            self.compileParameterList(sub_routine)
+            if self.advance().text == '{':
+                self.compileSubroutineBody(
+                    sub_routine, subroutine_name, subroutine_type)
 
-    def compileSubroutineBody(self, root, function_name):
+    def compileSubroutineBody(self, root, subroutine_name, subroutine_type):
         subroutine_body = ET.SubElement(root, 'subroutineBody')
-        self.add_sub_element(subroutine_body, SYMBOL)
         while True:
             self.advance()
             if self.current_token.text == 'var':
                 self.compileVarDec(subroutine_body)
             else:
                 break
-        self.vm.writeFunction(function_name, self.st.varCount(VAR_CONSTANT))
+        self.vm.writeFunction(subroutine_name, self.st.varCount(VAR_CONSTANT))
+        if subroutine_type == 'constructor':                    # If constructor allocate memory for obj
+            object_size = self.st.varCount(FIELD_CONSTANT)
+            # Push the memory size reqd
+            # Call Memory.alloc
+            self.vm.writePush(SEGMENT_CONSTANT, object_size)
+            self.vm.writeCall('Memory.alloc', 1)
+            self.vm.writePop(SEGMENT_POINTER, 0)                # Setup 'this'
+        elif subroutine_type == 'method':
+            self.vm.writePush(SEGMENT_ARGUMENT, 0)
+            self.vm.writePop(SEGMENT_POINTER, 0)                # Setup THIS
         self.compileStatements(subroutine_body)
-        self.add_sub_element(subroutine_body, SYMBOL)  # Add closing }
 
     def compileType(self, root):
         if self.current_token.text == 'int' or self.current_token.text == 'char' or self.current_token.text == 'boolean':
@@ -276,28 +291,31 @@ class CompilationEngine:
         do_statement = ET.SubElement(root, 'doStatement')
         self.add_sub_element(do_statement, KEYWORD)     # Add 'do' Keyword
         self.advance()
-        # Add SubroutineName or class/Var Name
-        self.add_sub_element(do_statement, IDENTIFIER)
-        call_function = self.current_token.text
-        self.advance()
-        if (self.current_token.text == '('):
-            self.add_sub_element(do_statement, SYMBOL)      # Add opening (
-            self.advance()
-            nArgs = self.compileExpressionList(do_statement)
+        self.compileExpression(do_statement)
+        # call_function = self.current_token.text
+        # self.advance()
+        # if (self.current_token.text == '('):
+        #     self.add_sub_element(do_statement, SYMBOL)      # Add opening (
+        #     self.advance()
+        #     nArgs = self.compileExpressionList(do_statement)
 
-        else:           # .subroutineName
-            self.add_sub_element(do_statement, SYMBOL)      # Add .
-            self.advance()
-            self.add_sub_element(do_statement, IDENTIFIER)
-            call_function += ('.' + self.current_token.text)
-            self.advance()                                  # Skip opening (
-            self.advance()
-            nArgs = self.compileExpressionList(do_statement)
-        self.vm.writeCall(call_function, nArgs)
-        self.advance()                                      # Skip closing )
+        # else:           # .subroutineName
+        #     self.add_sub_element(do_statement, SYMBOL)      # Add .
+        #     self.advance()
+        #     self.add_sub_element(do_statement, IDENTIFIER)
+        #     call_function += ('.' + self.current_token.text)
+        #     self.advance()                                  # Skip opening (
+        #     self.advance()
+        #     if self.current_token.text == ')':
+        #         nArgs = 0
+        #     else:
+        #         nArgs = self.compileExpressionList(do_statement)
+        # self.vm.writeCall(call_function, nArgs)
+        # self.advance()                                      # Skip closing )
 
         # self.compileSubroutineCall(do_statement)
         # self.advance()
+        self.vm.writePop(SEGMENT_TEMP, 0)
         if self.current_token.text == ';':
             self.add_sub_element(do_statement, SYMBOL)
 
@@ -318,9 +336,8 @@ class CompilationEngine:
             self.advance()
             self.compileExpression(let_statement)
         if self.current_token.text == ';':
-            segment = SEGMENT_LOCAL if(self.st.kindOf(
-                var_name) == VAR_CONSTANT) else SEGMENT_ARGUMENT
-            self.vm.writePop(segment, self.st.indexOf(var_name))
+            self.vm.writePop(self.get_segment(var_name),
+                             self.st.indexOf(var_name))
 
     def compileWhile(self, root):
         while_statement = ET.SubElement(root, 'whileStatement')
@@ -333,7 +350,7 @@ class CompilationEngine:
         self.vm.writeArithmetic('not')
         self.vm.writeIf(exit_label)
         if self.advance().text == '{':
-            self.advance()                                          #skip opening {
+            self.advance()  # skip opening {
             self.compileStatements(while_statement)
             # Add closing }
             self.vm.writeGoto(while_label)
@@ -350,7 +367,6 @@ class CompilationEngine:
             self.vm.writePush(SEGMENT_CONSTANT, 0)
         self.vm.writeReturn()
 
-
     def compileIf(self, root):
         if_statement = ET.SubElement(root, 'ifStatement')
         if_label = self.get_label(IF_LABEL)
@@ -365,12 +381,12 @@ class CompilationEngine:
         self.compileStatements(if_statement)
         self.vm.writeGoto(else_label)
         self.vm.writeLabel(if_label)
-        self.advance()                                      # Skip closing }
         if self.current_token.text == 'else':
+            self.advance()                                      # Skip closing } 
             self.advance()                                  # Skip else statement
             self.advance()                                  # Skip opening {
             self.compileStatements(if_statement)
-            self.vm.writeLabel(else_label)
+        self.vm.writeLabel(else_label)
 
     def compileExpression(self, root):
         expression_tag = ET.SubElement(root, 'expression')
@@ -407,7 +423,6 @@ class CompilationEngine:
 
     def compileClassName(self, root):
         if self.current_token.text in self.classes:
-            self.add_sub_element(root, IDENTIFIER)
             return True
         return False
 
@@ -420,7 +435,7 @@ class CompilationEngine:
     def compileTerm(self, root):
         term_statement = ET.SubElement(root, 'term')
         if self.current_token.tag == INTEGER:           # Integer Constant
-            self.vm.writePush(SEGMENT_CONSTANT, self.current_token.text)
+            self.vm.writePush(SEGMENT_CONSTANT, int(self.current_token.text))
             return True
         elif self.current_token.tag == STRING:          # String Constant
             pass
@@ -445,22 +460,34 @@ class CompilationEngine:
                 self.compileExpression(term_statement)
             elif self.tokens[-1].text == '.':
                 call_function = self.current_token.text
+                nArgs = 0
+                # Method Call, push obj as first arg
+                if self.st.kindOf(call_function) is not None:
+                    self.vm.writePush(self.get_segment(
+                        call_function), self.st.indexOf(call_function))
+                    nArgs = 1                                   # Obj is first argument
+                    call_function = self.st.typeOf(call_function)
                 self.advance()
                 self.advance()
                 call_function += '.' + self.current_token.text
                 self.advance()
                 self.advance()                          # Skip opening (
-                nArgs = self.compileExpressionList(term_statement)
+                if self.current_token.text != ')':
+                    nArgs += self.compileExpressionList(term_statement)
                 self.vm.writeCall(call_function, nArgs)
             elif self.tokens[-1].text == '(':
+                call_function = self.current_class + '.' + self.current_token.text
                 self.advance()
-                self.advance()
-                self.compileExpressionList(term_statement)
+                self.advance()              # Skip opening (
+                nArgs = 1
+                self.vm.writePush(SEGMENT_POINTER, 0)
+                if self.current_token.text != ')':
+                    nArgs += self.compileExpressionList(term_statement)
+                self.vm.writeCall(call_function, nArgs)
             else:                                       # Regular Variable Name
                 var_name = self.current_token.text
-                segment = SEGMENT_LOCAL if(self.st.kindOf(
-                    var_name) == VAR_CONSTANT) else SEGMENT_ARGUMENT
-                self.vm.writePush(segment, self.st.indexOf(var_name))
+                self.vm.writePush(self.get_segment(var_name),
+                                  self.st.indexOf(var_name))
 
         elif self.current_token.text == '-':            # unaryOp
             self.advance()
@@ -634,7 +661,7 @@ class JackTokenizer:
 
 if __name__ == '__main__':
     # analyzr = JackAnalyzer(sys.argv[1])
-    analyzr = JackAnalyzer('ConvertToBin')
+    analyzr = JackAnalyzer('Square')
     analyzr.analyze()
     # compile = CompilationEngine()
     # compile.openXMLFile('Main.xml')

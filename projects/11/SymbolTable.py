@@ -35,28 +35,37 @@ class SymbolTable:
             self.class_index[kind] += 1
 
     def varCount(self, kind):
-        if(self.inSubroutine):
+        if(kind == VAR_CONSTANT or kind == ARG_CONSTANT):
             return self.subroutine_index.get(kind)
         else:
             return self.class_index.get(kind)
 
     def kindOf(self, name):
-        if(self.inSubroutine):
-            return self.subroutine_table[name].get('kind')
-        else:
-            return self.class_table[name].get('kind')
+        kind = None
+        try:
+            kind = self.subroutine_table[name].get('kind')
+        except:
+            kind = self.class_table[name].get('kind')
+        finally:
+            return kind
 
     def typeOf(self, name):
-        if(self.inSubroutine):
-            return self.subroutine_table[name].get('type')
-        else:
-            return self.class_table[name].get('type')
+        obj_type = None
+        try:
+            obj_type = self.subroutine_table[name].get('type')
+        except:
+            obj_type = self.class_table[name].get('type')
+        finally:
+            return obj_type
 
     def indexOf(self, name):
-        if(self.inSubroutine):
-            return self.subroutine_table[name].get('index')
-        else:
-            return self.class_table[name].get('index')
+        index = None
+        try:
+            index = self.subroutine_table[name].get('index')
+        except:
+            index = self.class_table[name].get('index')
+        finally:
+            return index
 
     def __repr__(self):
         string = 'Class Table: \n'

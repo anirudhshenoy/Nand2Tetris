@@ -3,6 +3,8 @@ SEGMENT_TEMP = 'temp'
 SEGMENT_POINTER = 'pointer'
 SEGMENT_LOCAL = 'local'
 SEGMENT_ARGUMENT = 'argument'
+SEGMENT_STATIC = 'static'
+SEGMENT_TEMP = 'temp'
 
 LOOP_LABEL = 'LOOP_'
 EXIT_LABEL = 'EXIT_'

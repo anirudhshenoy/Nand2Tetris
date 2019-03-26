@@ -1,0 +1,45 @@
+<class>
+	<keyword>class</keyword>
+	<identifier>Main</identifier>
+	<symbol>{</symbol>
+	<subroutineDec>
+		<keyword>void</keyword>
+		<parameterList>
+</parameterList>
+		<subroutineBody>
+			<varDec>
+				<keyword>var</keyword>
+				<keyword>SquareGame</keyword>
+				<identifier>game</identifier>
+				<symbol>;</symbol>
+			</varDec>
+			<statements>
+				<letStatement>
+					<keyword>let</keyword>
+					<symbol>=</symbol>
+					<expression>
+						<term/>
+					</expression>
+				</letStatement>
+				<doStatement>
+					<keyword>do</keyword>
+					<expression>
+						<term/>
+					</expression>
+					<symbol>;</symbol>
+				</doStatement>
+				<doStatement>
+					<keyword>do</keyword>
+					<expression>
+						<term/>
+					</expression>
+					<symbol>;</symbol>
+				</doStatement>
+				<returnStatement>
+					<keyword>return</keyword>
+				</returnStatement>
+			</statements>
+		</subroutineBody>
+	</subroutineDec>
+	<symbol>}</symbol>
+</class>
