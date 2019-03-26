@@ -64,7 +64,7 @@
 	<symbol>.</symbol>
 	<identifier>readInt</identifier>
 	<symbol>(</symbol>
-	<stringConstant>Enter a number :</stringConstant>
+	<stringConstant>Enter a number:</stringConstant>
 	<symbol>)</symbol>
 	<symbol>;</symbol>
 	<keyword>let</keyword>
