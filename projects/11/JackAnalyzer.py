@@ -228,7 +228,7 @@ class CompilationEngine:
         count_parameters = 0
         while True:
             self.advance()
-            if self.current_token.tag == KEYWORD:
+            if self.current_token.tag == KEYWORD or self.current_token.tag == IDENTIFIER:
                 type = self.current_token.text
                 self.advance()
                 name = self.current_token.text
@@ -678,14 +678,13 @@ class JackTokenizer:
             temp_string = ''
             while (self.advance() != '"'):
                 temp_string = ' '.join([temp_string, self.current_token])
-            print(temp_string[1:])
             return temp_string[1:]
 
 
 if __name__ == '__main__':
     # analyzr = JackAnalyzer(sys.argv[1])
     #os.chdir('Pong')
-    analyzr = JackAnalyzer('Pong')
+    analyzr = JackAnalyzer('ComplexArrays')
     analyzr.analyze()
     # compile = CompilationEngine()
     # compile.openXMLFile('Main.xml')
