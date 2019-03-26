@@ -103,7 +103,6 @@ class CompilationEngine:
         return segment_dict.get(segment)
 
     def closeFile(self, file):
-        print(self.st)
         self.vm.close()
         tree = ET.ElementTree(self.root)
         tree.write(file)
@@ -325,19 +324,28 @@ class CompilationEngine:
         self.advance()
         var_name = self.compileVarName(let_statement)
         self.advance()
+        array_flag = False
         if self.current_token.text == '[':
-            self.add_sub_element(let_statement, SYMBOL)
+            self.vm.writePush(self.get_segment(var_name),
+                              self.st.indexOf(var_name))
             self.advance()
             self.compileExpression(let_statement)
-            self.add_sub_element(let_statement, SYMBOL)     # Add Closing ]
+            self.vm.writeArithmetic('add')
             self.advance()
+            array_flag = True
         if self.current_token.text == '=':
             self.add_sub_element(let_statement, SYMBOL)
             self.advance()
             self.compileExpression(let_statement)
         if self.current_token.text == ';':
-            self.vm.writePop(self.get_segment(var_name),
-                             self.st.indexOf(var_name))
+            if array_flag:
+                self.vm.writePop(SEGMENT_TEMP, 0)
+                self.vm.writePop(SEGMENT_POINTER, 1)
+                self.vm.writePush(SEGMENT_TEMP, 0)
+                self.vm.writePop(SEGMENT_THAT, 0)
+            else:
+                self.vm.writePop(self.get_segment(var_name),
+                                 self.st.indexOf(var_name))
 
     def compileWhile(self, root):
         while_statement = ET.SubElement(root, 'whileStatement')
@@ -382,7 +390,8 @@ class CompilationEngine:
         self.vm.writeGoto(else_label)
         self.vm.writeLabel(if_label)
         if self.current_token.text == 'else':
-            self.advance()                                      # Skip closing } 
+            # Skip closing }
+            self.advance()
             self.advance()                                  # Skip else statement
             self.advance()                                  # Skip opening {
             self.compileStatements(if_statement)
@@ -438,7 +447,12 @@ class CompilationEngine:
             self.vm.writePush(SEGMENT_CONSTANT, int(self.current_token.text))
             return True
         elif self.current_token.tag == STRING:          # String Constant
-            pass
+            string = self.current_token.text
+            self.vm.writePush(SEGMENT_CONSTANT, len(string))
+            self.vm.writeCall('String.new', 1)
+            for c in string:
+                self.vm.writePush(SEGMENT_CONSTANT, ord(c))
+                self.vm.writeCall('String.appendChar', 2)
             return True
         elif self.current_token.text == 'true':         # Keyword Constant
             self.vm.writePush(SEGMENT_CONSTANT, 1)
@@ -455,9 +469,15 @@ class CompilationEngine:
             return True
         elif self.current_token.tag == IDENTIFIER:      # var Name
             if self.tokens[-1].text == '[':
+                var_name = self.current_token.text
+                self.vm.writePush(self.get_segment(var_name),
+                                  self.st.indexOf(var_name))
                 self.advance()
                 self.advance()
                 self.compileExpression(term_statement)
+                self.vm.writeArithmetic('add')
+                self.vm.writePop(SEGMENT_POINTER, 1)
+                self.vm.writePush(SEGMENT_THAT, 0)
             elif self.tokens[-1].text == '.':
                 call_function = self.current_token.text
                 nArgs = 0
@@ -655,13 +675,13 @@ class JackTokenizer:
         if(self.tokenType() == STRING_CONST):
             temp_string = ''
             while (self.advance() != '"'):
-                temp_string = ''.join([temp_string, self.current_token])
-            return temp_string
+                temp_string = ' '.join([temp_string, self.current_token])
+            return temp_string[1:]
 
 
 if __name__ == '__main__':
     # analyzr = JackAnalyzer(sys.argv[1])
-    analyzr = JackAnalyzer('Square')
+    analyzr = JackAnalyzer('Average')
     analyzr.analyze()
     # compile = CompilationEngine()
     # compile.openXMLFile('Main.xml')
