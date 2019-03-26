@@ -182,6 +182,8 @@ class CompilationEngine:
             self.advance()
             self.compileType(sub_routine)
             self.advance()
+            if subroutine_type == 'method':
+                self.st.define('this', self.current_class, ARG_CONSTANT)
             subroutine_name = self.current_token.text
             self.advance()                                      # Skip opening (
             self.compileParameterList(sub_routine)
@@ -389,7 +391,7 @@ class CompilationEngine:
         self.compileStatements(if_statement)
         self.vm.writeGoto(else_label)
         self.vm.writeLabel(if_label)
-        if self.current_token.text == 'else':
+        if self.tokens[-1].text == 'else':
             # Skip closing }
             self.advance()
             self.advance()                                  # Skip else statement
@@ -575,7 +577,7 @@ class JackTokenizer:
         decomposed_str = []
         word = ''
         for s in str:
-            if(s.isalnum()):
+            if(s.isalnum() or s==':'):
                 word = ''.join([word, s])
             else:
                 if(len(word)):
@@ -676,12 +678,14 @@ class JackTokenizer:
             temp_string = ''
             while (self.advance() != '"'):
                 temp_string = ' '.join([temp_string, self.current_token])
+            print(temp_string[1:])
             return temp_string[1:]
 
 
 if __name__ == '__main__':
     # analyzr = JackAnalyzer(sys.argv[1])
-    analyzr = JackAnalyzer('Average')
+    #os.chdir('Pong')
+    analyzr = JackAnalyzer('Pong')
     analyzr.analyze()
     # compile = CompilationEngine()
     # compile.openXMLFile('Main.xml')

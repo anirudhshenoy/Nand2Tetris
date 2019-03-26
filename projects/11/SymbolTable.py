@@ -9,7 +9,6 @@ VAR_CONSTANT = 'var'
 class SymbolTable:
     def __init__(self):
         self.class_table = {}
-        self.subroutine_table = {}
         self.inSubroutine = False
         self.class_index = {
             STATIC_CONSTANT: 0,
@@ -18,6 +17,7 @@ class SymbolTable:
 
     def startSubroutine(self):
         self.inSubroutine = True
+        self.subroutine_table = {}
         self.subroutine_index = {
             ARG_CONSTANT: 0,
             VAR_CONSTANT: 0
