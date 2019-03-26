@@ -1,6 +1,13 @@
 SEGMENT_CONSTANT = 'constant'
 SEGMENT_TEMP = 'temp'
 SEGMENT_POINTER = 'pointer'
+SEGMENT_LOCAL = 'local'
+SEGMENT_ARGUMENT = 'argument'
+
+LOOP_LABEL = 'LOOP_'
+EXIT_LABEL = 'EXIT_'
+IF_LABEL = 'IF_'
+ELSE_LABEL = 'ELSE_'
 
 
 class VMWriter:
@@ -18,13 +25,13 @@ class VMWriter:
         self.f_vm.write(command + '\n')
 
     def writeLabel(self, label):
-        pass
+        self.f_vm.write('label ' + label + '\n')
 
     def writeGoto(self, label):
-        pass
+        self.f_vm.write('goto ' + label + '\n')
 
     def writeIf(self, label):
-        pass
+        self.f_vm.write('if-goto ' + label + '\n')
 
     def writeCall(self, name, nArgs):
         self.f_vm.write('call ' + name + ' ' + str(nArgs) + '\n')
