@@ -47,19 +47,14 @@ class Memory {
                 return 0;
             }
         }
-        if (prevObject = null){
-
-        }
         let size_remaining= freeList[1];
         let freeList = address + size + 2;
         if (~(prevObject = null)){
             let prevObject[0] = freeList;
         }
         let freeList[0] = null;
-        let freeList[1] = total_size - (size +2);
+        let freeList[1] = size_remaining - (size +2);
         let address[1] = size;
-        do Output.printInt(freeList);
-        do Output.println(); 
         return (address + 2);
         
     }
