@@ -191,7 +191,7 @@ class Output {
     function void moveCursor(int i, int j) {
         let current_row = i;
         let current_col = j;
-        do Output.printCharWithoutAdvance(' ');
+        do Output.printCharWithoutAdvance(32);
         return;
     }
 

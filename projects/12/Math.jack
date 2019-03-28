@@ -57,19 +57,33 @@ class Math {
      *  the Jack expressions x*y and multiply(x,y) return the same value.
      */
     function int multiply(int x, int y) {
-        var int sum, shiftedX, i;
-        let i = 0;
-        let sum = 0;
-        let shiftedX = x;
-        while (i < 16){
-            if(Math.bit(y,i)){
-                let sum = sum + shiftedX;
-            }
-            let shiftedX = shiftedX + shiftedX;
-            let i = i + 1; 
+        var int sum, shifted_x, j;
+
+        if (x < 0) {
+        return -Math.multiply(-x, y);
         }
+
+        if (y < 0) {
+        return -Math.multiply(x, -y);
+        }
+
+        let j = 0;
+        let sum = 0;
+        let shifted_x = x;
+
+        while (j < 16) {
+        if (twoToThe[j] & y) {
+            let sum = sum + shifted_x;
+        }
+
+        let shifted_x = shifted_x + shifted_x;
+
+        let j = j + 1;
+        }
+
         return sum;
     }
+            
 
     /** Returns the integer part of x/y.
      *  When a Jack compiler detects the multiplication operator '/' in the 

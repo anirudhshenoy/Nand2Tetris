@@ -31,22 +31,12 @@ class Screen {
 
     /** Erases the entire screen. */
     function void clearScreen() {
-        var int x, y;
-        var boolean currentColor;
-        let currentColor = color;
-        let x = 0; 
-        
+       
         do Screen.setColor(false);
-        while (x< 512){
-            let y = 0;
-            while (y <256){
-                do Screen.drawPixel(x,y);
-                let y = y + 1;
-            }
-            let x = x + 1;
-        }
-        do Screen.setColor(currentColor);
-        return;
+        do Screen.drawRectangle(0, 0, 511, 255);
+        do Screen.setColor(true);
+
+        return; 
     }
 
     /** Sets the current color, to be used for all subsequent drawXXX commands.
