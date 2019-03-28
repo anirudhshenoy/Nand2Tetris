@@ -26,8 +26,6 @@ push constant 332
 push constant 150
 call Screen.drawRectangle 4
 pop temp 0
-call Screen.clearScreen 0
-pop temp 0
 push constant 0
 not
 call Screen.setColor 1
